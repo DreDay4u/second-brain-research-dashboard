@@ -22,6 +22,14 @@ load_dotenv()
 # Import the Pydantic AI agent
 from agent import agent, AgentState, create_agent
 
+# Import A2UI generator for component generation
+from a2ui_generator import (
+    A2UIComponent,
+    generate_component,
+    emit_components,
+    VALID_COMPONENT_TYPES,
+)
+
 # Configuration
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 ALLOWED_ORIGINS = os.getenv(
