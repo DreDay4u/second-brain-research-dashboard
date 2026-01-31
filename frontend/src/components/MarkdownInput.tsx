@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
 import { Upload } from "lucide-react"
+import { sampleDocuments } from "@/data/sampleDocuments"
 
 interface MarkdownInputProps {
   onGenerate?: (content: string, file?: File) => void
@@ -79,6 +80,14 @@ export function MarkdownInput({
     }
   }
 
+  const loadSampleDocument = (documentId: string) => {
+    const doc = sampleDocuments.find(d => d.id === documentId)
+    if (doc) {
+      setContent(doc.content)
+      setUploadedFile(null) // Clear any uploaded file
+    }
+  }
+
   return (
     <div className={cn("w-full space-y-4", className)}>
       <div
@@ -118,6 +127,34 @@ export function MarkdownInput({
               >
                 Browse Files
               </Button>
+            </div>
+
+            {/* Sample Documents Section */}
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-muted-foreground">
+                Or try a sample document:
+              </p>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                {sampleDocuments.map((doc) => (
+                  <Button
+                    key={doc.id}
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => loadSampleDocument(doc.id)}
+                    className="flex flex-col items-center justify-center h-auto py-3 px-2 gap-1 hover:bg-primary/10 hover:border-primary transition-colors"
+                    title={doc.description}
+                  >
+                    <span className="text-2xl">{doc.icon}</span>
+                    <span className="text-xs font-medium text-center leading-tight">
+                      {doc.title}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {doc.category}
+                    </span>
+                  </Button>
+                ))}
+              </div>
             </div>
 
             {/* Textarea */}
