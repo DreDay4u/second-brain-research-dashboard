@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from dotenv import load_dotenv
+from ag_ui_protocol import AGUIAdapter
 
 # Load environment variables
 load_dotenv()
@@ -24,7 +25,7 @@ from agent import agent, AgentState, create_agent
 # Configuration
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
 ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS", "http://localhost:3010,http://localhost:3000"
+    "ALLOWED_ORIGINS", "http://localhost:3010,http://localhost:3011,http://localhost:3012,http://localhost:3000,http://localhost:8080"
 ).split(",")
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4")
@@ -80,11 +81,11 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS middleware
+# CORS middleware - Allow all origins for development
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"],  # Allow all origins for local development
+    allow_credentials=False,  # Must be False when using wildcard origins
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -105,16 +106,17 @@ async def health_check():
 @app.post("/ag-ui/stream")
 async def ag_ui_stream(request: AgentRequest):
     """
-    AG-UI streaming endpoint for generative UI.
+    AG-UI streaming endpoint for generative UI using AGUIAdapter.
 
     This endpoint receives Markdown content and streams back AG-UI protocol
     messages containing the generated dashboard components.
 
     Protocol flow:
     1. Client sends POST with { markdown: "...", user_id: "..." }
-    2. Agent analyzes content and determines optimal layout
-    3. Agent streams AG-UI messages with component definitions
-    4. Client renders components in real-time using A2UI
+    2. AGUIAdapter wraps the Pydantic AI agent
+    3. Agent analyzes content and determines optimal layout
+    4. AGUIAdapter streams AG-UI messages with component definitions
+    5. Client renders components in real-time using A2UI
 
     Returns:
         StreamingResponse with text/event-stream content type
@@ -133,45 +135,24 @@ async def ag_ui_stream(request: AgentRequest):
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """
-        Generate AG-UI protocol events.
+        Generate AG-UI protocol events using AGUIAdapter.
 
-        Uses the Pydantic AI agent to:
-        1. Analyze Markdown content (content type, structure, media)
-        2. Select optimal layout (magazine, dashboard, tutorial, etc.)
-        3. Extract components (headlines, stats, videos, etc.)
-        4. Emit AG-UI protocol messages with A2UI component definitions
+        The AGUIAdapter handles the streaming protocol and wraps our Pydantic AI
+        agent to emit properly formatted AG-UI messages.
         """
-        import json
+        # Create agent state with the markdown content
+        state = AgentState(document_content=request.markdown)
 
-        try:
-            # Initialize agent state
-            yield 'data: {"type": "status", "message": "Agent initialized"}\n\n'
-            yield 'data: {"type": "status", "message": "Analyzing markdown content..."}\n\n'
+        # Create AGUIAdapter instance for streaming
+        adapter = AGUIAdapter(agent)
 
-            # Create agent state
-            state = AgentState(document_content=request.markdown)
-
-            # Run agent to analyze content
-            result = await agent.run(
-                "Analyze this markdown document and extract key components for dashboard creation.",
-                deps=state,
-            )
-
-            # Stream the analysis results
-            yield f'data: {json.dumps({"type": "analysis", "result": result.data})}\n\n'
-
-            # Stream component information if available
-            if state.analysis_results:
-                yield f'data: {json.dumps({"type": "components", "data": state.analysis_results})}\n\n'
-
-            if state.content_type:
-                yield f'data: {json.dumps({"type": "content_type", "value": state.content_type})}\n\n'
-
-            yield 'data: {"type": "complete", "message": "Dashboard generation complete"}\n\n'
-
-        except Exception as e:
-            error_msg = f"Error during agent processing: {str(e)}"
-            yield f'data: {json.dumps({"type": "error", "message": error_msg})}\n\n'
+        # Use AGUIAdapter.run_stream() to handle SSE streaming
+        # This yields properly formatted SSE events
+        async for event in adapter.run_stream(
+            prompt="Analyze this markdown document and extract key components for dashboard creation.",
+            deps=state,
+        ):
+            yield event
 
     return StreamingResponse(
         event_generator(),
