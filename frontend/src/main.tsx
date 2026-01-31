@@ -5,10 +5,12 @@ import './index.css'
 import App from './App.tsx'
 import A2UITestPage from './A2UITestPage.tsx'
 import NewsComponentsTestPage from './pages/NewsComponentsTestPage.tsx'
+import TestPeopleComponents from './pages/TestPeopleComponents.tsx'
 
 // Use test pages based on query params
 const USE_TEST_PAGE = window.location.search.includes('test');
 const USE_NEWS_TEST_PAGE = window.location.search.includes('news-test');
+const USE_PEOPLE_TEST_PAGE = window.location.search.includes('people-test');
 
 // CopilotKit configuration
 const COPILOT_CONFIG = {
@@ -20,7 +22,9 @@ console.log('Initializing CopilotKit with backend:', COPILOT_CONFIG.runtimeUrl)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {USE_NEWS_TEST_PAGE ? (
+    {USE_PEOPLE_TEST_PAGE ? (
+      <TestPeopleComponents />
+    ) : USE_NEWS_TEST_PAGE ? (
       <NewsComponentsTestPage />
     ) : USE_TEST_PAGE ? (
       <A2UITestPage />

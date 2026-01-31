@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { HeadlineCard, TrendIndicator, TimelineEvent, NewsTicker } from "@/components/A2UI/News";
+import { ProfileCard, CompanyCard, QuoteCard, ExpertTip } from "@/components/A2UI/People";
 
 /**
  * A2UI Component Specification
@@ -450,102 +451,12 @@ export const a2uiCatalog: Record<string, ComponentRenderer> = {
   ),
 
   // ===== PEOPLE COMPONENTS =====
-  "a2ui.ProfileCard": ({ name, title, bio, avatar_url, company, location, social_links }: any) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start gap-4">
-          {avatar_url && (
-            <img src={avatar_url} alt={name} className="w-16 h-16 rounded-full" />
-          )}
-          <div className="flex-1">
-            <CardTitle className="text-base">{name}</CardTitle>
-            <CardDescription>
-              {title}
-              {company && ` at ${company}`}
-              {location && ` • ${location}`}
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      {bio && (
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{bio}</p>
-        </CardContent>
-      )}
-      {social_links && social_links.length > 0 && (
-        <CardFooter className="flex gap-2">
-          {social_links.map((link: any, idx: number) => (
-            <Button key={idx} asChild variant="outline" size="sm">
-              <a href={link.url} target="_blank" rel="noopener noreferrer">{link.platform}</a>
-            </Button>
-          ))}
-        </CardFooter>
-      )}
-    </Card>
-  ),
-
-  "a2ui.CompanyCard": ({ name, description, industry, size, logo_url, location, url }: any) => (
-    <Card>
-      <CardHeader>
-        <div className="flex items-start gap-3">
-          {logo_url && <img src={logo_url} alt={name} className="w-12 h-12 rounded" />}
-          <div className="flex-1">
-            <CardTitle className="text-base">{name}</CardTitle>
-            <CardDescription>
-              {industry}
-              {size && ` • ${size} employees`}
-              {location && ` • ${location}`}
-            </CardDescription>
-          </div>
-        </div>
-      </CardHeader>
-      {description && (
-        <CardContent>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </CardContent>
-      )}
-      {url && (
-        <CardFooter>
-          <Button asChild variant="outline" className="w-full">
-            <a href={url} target="_blank" rel="noopener noreferrer">Visit Website</a>
-          </Button>
-        </CardFooter>
-      )}
-    </Card>
-  ),
-
-  "a2ui.QuoteCard": ({ quote, author, title, context, avatar_url }: any) => (
-    <Card className="border-l-4 border-primary">
-      <CardContent className="pt-6">
-        <blockquote className="text-lg italic mb-4">"{quote}"</blockquote>
-        <div className="flex items-center gap-3">
-          {avatar_url && <img src={avatar_url} alt={author} className="w-10 h-10 rounded-full" />}
-          <div>
-            <div className="font-semibold">{author}</div>
-            {title && <div className="text-sm text-muted-foreground">{title}</div>}
-          </div>
-        </div>
-        {context && <p className="text-sm text-muted-foreground mt-3">{context}</p>}
-      </CardContent>
-    </Card>
-  ),
+  "a2ui.ProfileCard": (props: any) => <ProfileCard {...props} />,
+  "a2ui.CompanyCard": (props: any) => <CompanyCard {...props} />,
+  "a2ui.QuoteCard": (props: any) => <QuoteCard {...props} />,
 
   // ===== SUMMARY COMPONENTS =====
-  "a2ui.ExpertTip": ({ tip, expert, category }: any) => (
-    <Card className="bg-blue-500/10 border-blue-500">
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          <span className="text-xl">💡</span>
-          <CardTitle className="text-sm">Expert Tip</CardTitle>
-          {category && <Badge variant="secondary">{category}</Badge>}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm">{tip}</p>
-        {expert && <p className="text-xs text-muted-foreground mt-2">— {expert}</p>}
-      </CardContent>
-    </Card>
-  ),
+  "a2ui.ExpertTip": (props: any) => <ExpertTip {...props} />,
 
   "a2ui.TLDR": ({ summary, key_points }: any) => (
     <Card className="bg-yellow-500/10 border-yellow-500">
