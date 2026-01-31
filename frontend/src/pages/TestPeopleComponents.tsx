@@ -3,8 +3,6 @@
  *
  * Displays all four people components with sample data for testing.
  */
-
-import React from 'react';
 import { ProfileCard } from '@/components/A2UI/People/ProfileCard';
 import { CompanyCard } from '@/components/A2UI/People/CompanyCard';
 import { QuoteCard } from '@/components/A2UI/People/QuoteCard';

@@ -10,8 +10,10 @@ import SummaryComponentsTestPage from './pages/SummaryComponentsTestPage.tsx'
 import MediaComponentsTest from './pages/MediaComponentsTest.tsx'
 import DataComponentsTest from './pages/DataComponentsTest.tsx'
 import ResourceTest from './pages/ResourceTest.tsx'
+import A2UIValidatorTest from './pages/A2UIValidatorTest.tsx'
 
 // Use test pages based on query params (check specific tests first to avoid conflicts)
+const USE_VALIDATOR_TEST_PAGE = window.location.search.includes('validator-test');
 const USE_RESOURCE_TEST_PAGE = window.location.search.includes('resource-test');
 const USE_DATA_TEST_PAGE = window.location.search.includes('data-test');
 const USE_MEDIA_TEST_PAGE = window.location.search.includes('media-test');
@@ -30,7 +32,9 @@ console.log('Initializing CopilotKit with backend:', COPILOT_CONFIG.runtimeUrl)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    {USE_RESOURCE_TEST_PAGE ? (
+    {USE_VALIDATOR_TEST_PAGE ? (
+      <A2UIValidatorTest />
+    ) : USE_RESOURCE_TEST_PAGE ? (
       <ResourceTest />
     ) : USE_DATA_TEST_PAGE ? (
       <DataComponentsTest />
