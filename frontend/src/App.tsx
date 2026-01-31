@@ -6,6 +6,46 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { MarkdownInput } from "@/components/MarkdownInput"
+import { A2UIRendererList } from "@/components/A2UIRenderer"
+import { getRegisteredTypes, type A2UIComponent } from "@/lib/a2ui-catalog"
+
+// Sample A2UI components to demonstrate the catalog
+const sampleA2UIComponents: A2UIComponent[] = [
+  {
+    id: 'demo-headline-1',
+    type: 'a2ui.HeadlineCard',
+    props: {
+      title: 'A2UI Catalog Successfully Registered',
+      summary: 'The component catalog maps 45+ backend component types to React components for dynamic rendering.',
+      source: 'System',
+      published_at: new Date().toISOString(),
+      sentiment: 'positive',
+    },
+  },
+  {
+    id: 'demo-stat-1',
+    type: 'a2ui.StatCard',
+    props: {
+      label: 'Registered Components',
+      value: String(getRegisteredTypes().length),
+      trend: '+45 new',
+      icon: '📦',
+    },
+  },
+  {
+    id: 'demo-tldr-1',
+    type: 'a2ui.TLDR',
+    props: {
+      summary: 'A2UI catalog enables backend-to-frontend component rendering with full support for layouts, styling, and nested children.',
+      key_points: [
+        'News, media, data, list, and resource components',
+        'Summary, comparison, and instructional components',
+        'Layout components (Section, Grid, Tabs, Accordion)',
+        'Tag components (Badge, Status, Priority)',
+      ],
+    },
+  },
+];
 
 function App() {
   return (
@@ -52,9 +92,10 @@ function App() {
         </Card>
 
         <Tabs defaultValue="forms" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="forms">Forms</TabsTrigger>
             <TabsTrigger value="accordion">Accordion</TabsTrigger>
+            <TabsTrigger value="a2ui">A2UI Catalog</TabsTrigger>
             <TabsTrigger value="info">Info</TabsTrigger>
           </TabsList>
           <TabsContent value="forms">
@@ -105,6 +146,41 @@ function App() {
                     </AccordionContent>
                   </AccordionItem>
                 </Accordion>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="a2ui">
+            <Card>
+              <CardHeader>
+                <CardTitle>A2UI Component Catalog</CardTitle>
+                <CardDescription>
+                  Dynamic component rendering system - {getRegisteredTypes().length} components registered
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <h3 className="font-semibold mb-2 text-sm">Registered Component Types</h3>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {getRegisteredTypes().map((type) => (
+                      <Badge key={type} variant="secondary" className="text-xs">
+                        {type.replace('a2ui.', '')}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold mb-3">Sample Components</h3>
+                  <A2UIRendererList components={sampleA2UIComponents} spacing="md" />
+                </div>
+
+                <div className="bg-blue-500/10 border border-blue-500 p-4 rounded-lg">
+                  <p className="text-sm">
+                    <strong>How it works:</strong> The backend generates A2UI component specs
+                    (with type, props, and children). The A2UIRenderer looks up the type in the
+                    catalog and renders the corresponding React component.
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
