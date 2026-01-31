@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { HeadlineCard, TrendIndicator, TimelineEvent, NewsTicker } from "@/components/A2UI/News";
 import { ProfileCard, CompanyCard, QuoteCard, ExpertTip } from "@/components/A2UI/People";
+import { TLDR, KeyTakeaways, ExecutiveSummary, TableOfContents } from "@/components/A2UI/Summary";
 
 /**
  * A2UI Component Specification
@@ -457,98 +458,10 @@ export const a2uiCatalog: Record<string, ComponentRenderer> = {
 
   // ===== SUMMARY COMPONENTS =====
   "a2ui.ExpertTip": (props: any) => <ExpertTip {...props} />,
-
-  "a2ui.TLDR": ({ summary, key_points }: any) => (
-    <Card className="bg-yellow-500/10 border-yellow-500">
-      <CardHeader>
-        <CardTitle className="text-sm flex items-center gap-2">
-          <span>⚡</span> TL;DR
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <p className="text-sm font-medium">{summary}</p>
-        {key_points && key_points.length > 0 && (
-          <ul className="space-y-1 mt-2">
-            {key_points.map((point: string, idx: number) => (
-              <li key={idx} className="text-sm text-muted-foreground flex gap-2">
-                <span>•</span>
-                <span>{point}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
-  ),
-
-  "a2ui.KeyTakeaways": ({ items, title }: any) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title || 'Key Takeaways'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <ul className="space-y-2">
-          {items?.map((item: string, idx: number) => (
-            <li key={idx} className="flex items-start gap-2">
-              <span className="text-primary mt-1">✓</span>
-              <span className="text-sm">{item}</span>
-            </li>
-          ))}
-        </ul>
-      </CardContent>
-    </Card>
-  ),
-
-  "a2ui.ExecutiveSummary": ({ title, overview, highlights, conclusion }: any) => (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title || 'Executive Summary'}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {overview && <p className="text-sm">{overview}</p>}
-        {highlights && highlights.length > 0 && (
-          <div>
-            <h4 className="font-semibold text-sm mb-2">Highlights</h4>
-            <ul className="space-y-1">
-              {highlights.map((highlight: string, idx: number) => (
-                <li key={idx} className="text-sm text-muted-foreground flex gap-2">
-                  <span>•</span>
-                  <span>{highlight}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        {conclusion && (
-          <div>
-            <h4 className="font-semibold text-sm mb-1">Conclusion</h4>
-            <p className="text-sm text-muted-foreground">{conclusion}</p>
-          </div>
-        )}
-      </CardContent>
-    </Card>
-  ),
-
-  "a2ui.TableOfContents": ({ items, title }: any) => (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title || 'Table of Contents'}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <nav>
-          <ul className="space-y-2">
-            {items?.map((item: any, idx: number) => (
-              <li key={idx} style={{ marginLeft: `${(item.level || 0) * 1.5}rem` }}>
-                <a href={item.anchor || `#${item.title.toLowerCase().replace(/\s+/g, '-')}`} className="text-sm hover:underline text-primary">
-                  {item.title}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-      </CardContent>
-    </Card>
-  ),
+  "a2ui.TLDR": (props: any) => <TLDR {...props} />,
+  "a2ui.KeyTakeaways": (props: any) => <KeyTakeaways {...props} />,
+  "a2ui.ExecutiveSummary": (props: any) => <ExecutiveSummary {...props} />,
+  "a2ui.TableOfContents": (props: any) => <TableOfContents {...props} />,
 
   // ===== COMPARISON COMPONENTS =====
   "a2ui.ComparisonTable": ({ headers, rows, caption }: any) => (
