@@ -5,6 +5,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { MarkdownInput } from "@/components/MarkdownInput"
 
 function App() {
   return (
@@ -32,6 +33,21 @@ function App() {
             <Button variant="outline">Outline</Button>
             <Button variant="ghost">Ghost</Button>
             <Button variant="link">Link</Button>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Markdown Input</CardTitle>
+            <CardDescription>Create a dashboard from markdown content</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MarkdownInput
+              onGenerate={(content, file) => {
+                console.log('Generate clicked:', { content, file })
+                alert(`Dashboard generation started!\nContent length: ${content.length}\nFile: ${file?.name || 'None'}`)
+              }}
+            />
           </CardContent>
         </Card>
 
