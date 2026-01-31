@@ -21,9 +21,9 @@ createRoot(document.getElementById('root')!).render(
     {USE_TEST_PAGE ? (
       <A2UITestPage />
     ) : (
-      <CopilotKit runtimeUrl={COPILOT_CONFIG.runtimeUrl}>
-        <App />
-      </CopilotKit>
+      // Temporarily render without CopilotKit to test layout
+      // CopilotKit will be re-enabled when backend agent is properly configured
+      <App />
     )}
   </StrictMode>,
 )
