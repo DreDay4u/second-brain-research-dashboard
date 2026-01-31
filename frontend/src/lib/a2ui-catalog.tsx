@@ -17,6 +17,7 @@ import { ProfileCard, CompanyCard, QuoteCard, ExpertTip } from "@/components/A2U
 import { TLDR, KeyTakeaways, ExecutiveSummary, TableOfContents } from "@/components/A2UI/Summary";
 import { VideoCard, ImageCard, PlaylistCard, PodcastCard } from "@/components/A2UI/Media";
 import { StatCard, MetricRow, ProgressRing, ComparisonBar, DataTable, MiniChart } from "@/components/A2UI/Data";
+import { RankedItem, ChecklistItem, ProConItem, BulletPoint } from "@/components/A2UI/Lists";
 
 /**
  * A2UI Component Specification
@@ -71,50 +72,10 @@ export const a2uiCatalog: Record<string, ComponentRenderer> = {
   "a2ui.MiniChart": (props: any) => <MiniChart {...props} />,
 
   // ===== LIST COMPONENTS =====
-  "a2ui.RankedItem": ({ rank, title, description, score, badge }: any) => (
-    <div className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground font-bold text-sm">
-        {rank}
-      </div>
-      <div className="flex-1">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="font-semibold">{title}</span>
-          {badge && <Badge variant="secondary">{badge}</Badge>}
-        </div>
-        {description && <p className="text-sm text-muted-foreground">{description}</p>}
-      </div>
-      {score && <div className="text-lg font-bold text-muted-foreground">{score}</div>}
-    </div>
-  ),
-
-  "a2ui.ChecklistItem": ({ text, checked, category }: any) => (
-    <div className="flex items-center gap-3 p-2 rounded hover:bg-muted/50 transition-colors">
-      <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${checked ? 'bg-primary border-primary' : 'border-muted-foreground'}`}>
-        {checked && <span className="text-primary-foreground text-xs">✓</span>}
-      </div>
-      <span className={`flex-1 ${checked ? 'line-through text-muted-foreground' : ''}`}>{text}</span>
-      {category && <Badge variant="outline" className="text-xs">{category}</Badge>}
-    </div>
-  ),
-
-  "a2ui.ProConItem": ({ text, type, weight }: any) => (
-    <div className={`flex items-start gap-2 p-2 rounded-lg ${type === 'pro' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-      <span className={`text-lg ${type === 'pro' ? 'text-green-500' : 'text-red-500'}`}>
-        {type === 'pro' ? '✓' : '✗'}
-      </span>
-      <span className="flex-1 text-sm">{text}</span>
-      {weight && <Badge variant="secondary">{weight}</Badge>}
-    </div>
-  ),
-
-  "a2ui.BulletPoint": ({ text, level, icon, color }: any) => (
-    <div className="flex items-start gap-2" style={{ marginLeft: `${(level || 0) * 1.5}rem` }}>
-      <span className={`mt-1 ${color ? `text-${color}-500` : 'text-primary'}`}>
-        {icon || '•'}
-      </span>
-      <span className="text-sm">{text}</span>
-    </div>
-  ),
+  "a2ui.RankedItem": (props: any) => <RankedItem {...props} />,
+  "a2ui.ChecklistItem": (props: any) => <ChecklistItem {...props} />,
+  "a2ui.ProConItem": (props: any) => <ProConItem {...props} />,
+  "a2ui.BulletPoint": (props: any) => <BulletPoint {...props} />,
 
   // ===== RESOURCE COMPONENTS =====
   "a2ui.LinkCard": ({ title, description, url, favicon_url, domain }: any) => (
