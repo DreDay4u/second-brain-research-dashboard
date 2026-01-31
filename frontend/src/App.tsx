@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { MarkdownInput } from "@/components/MarkdownInput"
 import { A2UIRendererList } from "@/components/A2UIRenderer"
+import { LoadingSkeleton } from "@/components/LoadingSkeleton"
+import { EmptyState } from "@/components/EmptyState"
 import type { A2UIComponent } from "@/lib/a2ui-catalog"
 import { FileText, Sparkles } from "lucide-react"
 
@@ -89,35 +91,17 @@ function App() {
 
             {/* Empty State */}
             {!isGenerating && dashboardComponents.length === 0 && (
-              <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-border rounded-lg bg-card/50">
-                <Sparkles className="h-16 w-16 text-muted-foreground/40 mb-4" />
-                <h3 className="text-xl font-semibold mb-2 text-muted-foreground">
-                  No Dashboard Yet
-                </h3>
-                <p className="text-sm text-muted-foreground text-center max-w-md">
-                  Enter your research content in the left panel and click "Generate Dashboard" to create an interactive visualization
-                </p>
-              </div>
+              <EmptyState />
             )}
 
             {/* Loading State */}
             {isGenerating && (
-              <div className="flex flex-col items-center justify-center min-h-[400px] border-2 border-dashed border-primary/50 rounded-lg bg-primary/5">
-                <div className="animate-pulse flex flex-col items-center">
-                  <Sparkles className="h-16 w-16 text-primary mb-4 animate-spin" />
-                  <h3 className="text-xl font-semibold mb-2 text-primary">
-                    Generating Dashboard...
-                  </h3>
-                  <p className="text-sm text-muted-foreground">
-                    Analyzing your research content
-                  </p>
-                </div>
-              </div>
+              <LoadingSkeleton />
             )}
 
             {/* A2UI Dashboard Renderer */}
             {!isGenerating && dashboardComponents.length > 0 && (
-              <div className="space-y-6">
+              <div className="space-y-6 animate-fade-in">
                 <A2UIRendererList
                   components={dashboardComponents}
                   spacing="lg"
