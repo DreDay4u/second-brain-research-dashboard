@@ -73,6 +73,14 @@ from a2ui_generator import (
     generate_vs_card,
     generate_feature_matrix,
     generate_pricing_table,
+    # Layout generators
+    generate_section,
+    generate_grid,
+    generate_columns,
+    generate_tabs,
+    generate_accordion,
+    generate_carousel,
+    generate_sidebar,
 )
 
 

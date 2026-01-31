@@ -28,6 +28,7 @@ from a2ui_generator import (
     generate_component,
     emit_components,
     VALID_COMPONENT_TYPES,
+    orchestrate_dashboard,
 )
 
 # Configuration
@@ -143,24 +144,49 @@ async def ag_ui_stream(request: AgentRequest):
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """
-        Generate AG-UI protocol events using AGUIAdapter.
+        Generate AG-UI protocol events using the orchestrator pipeline.
 
-        The AGUIAdapter handles the streaming protocol and wraps our Pydantic AI
-        agent to emit properly formatted AG-UI messages.
+        Uses orchestrate_dashboard() to transform markdown into A2UI components,
+        then streams them via AGUIAdapter protocol.
         """
-        # Create agent state with the markdown content
-        state = AgentState(document_content=request.markdown)
+        try:
+            # Step 1: Use orchestrator to generate components from markdown
+            components = orchestrate_dashboard(request.markdown)
 
-        # Create AGUIAdapter instance for streaming
-        adapter = AGUIAdapter(agent)
+            # Step 2: Stream components via AG-UI protocol
+            # Create AGUIAdapter instance for streaming
+            adapter = AGUIAdapter(agent)
 
-        # Use AGUIAdapter.run_stream() to handle SSE streaming
-        # This yields properly formatted SSE events
-        async for event in adapter.run_stream(
-            prompt="Analyze this markdown document and extract key components for dashboard creation.",
-            deps=state,
-        ):
-            yield event
+            # Emit start event
+            yield f"event: start\ndata: {{}}\n\n"
+
+            # Emit each component as an AG-UI message
+            for component in components:
+                # Format component as AG-UI protocol message
+                component_data = {
+                    "type": "component",
+                    "component": {
+                        "type": component.type,
+                        "id": component.id,
+                        "props": component.props
+                    }
+                }
+
+                import json
+                yield f"event: component\ndata: {json.dumps(component_data)}\n\n"
+
+            # Emit completion event
+            yield f"event: done\ndata: {json.dumps({'component_count': len(components)})}\n\n"
+
+        except Exception as e:
+            # Emit error event
+            import json
+            error_data = {
+                "type": "error",
+                "message": str(e),
+                "details": "Failed to generate dashboard components"
+            }
+            yield f"event: error\ndata: {json.dumps(error_data)}\n\n"
 
     return StreamingResponse(
         event_generator(),
