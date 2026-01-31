@@ -38,9 +38,9 @@ export function TrendIndicator({
   period,
 }: TrendIndicatorProps): React.ReactElement {
   const getTrendColor = () => {
-    if (trend === 'up') return 'text-green-500';
-    if (trend === 'down') return 'text-red-500';
-    return 'text-muted-foreground';
+    if (trend === 'up') return 'text-blue-400';
+    if (trend === 'down') return 'text-blue-300';
+    return 'text-blue-400/60';
   };
 
   const getTrendIcon = () => {
@@ -50,19 +50,19 @@ export function TrendIndicator({
   };
 
   return (
-    <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
+    <div className="flex items-center gap-2 p-3 rounded-lg bg-gradient-to-br from-card to-secondary/30 border border-blue-500/20 hover:border-blue-400/40 transition-all duration-300">
       <div className="flex-1">
-        <div className="text-sm font-medium">{metric}</div>
-        <div className="text-2xl font-bold">{value}</div>
+        <div className="text-sm font-medium text-blue-200">{metric}</div>
+        <div className="text-2xl font-bold text-white">{value}</div>
       </div>
       <div className={`flex items-center gap-1 ${getTrendColor()}`}>
-        <span className="text-lg" aria-label={`Trend ${trend}`}>
+        <span className="text-lg animate-pulse" aria-label={`Trend ${trend}`}>
           {getTrendIcon()}
         </span>
         <span className="font-semibold">{change}</span>
       </div>
       {period && (
-        <div className="text-xs text-muted-foreground">{period}</div>
+        <div className="text-xs text-blue-300/70">{period}</div>
       )}
     </div>
   );

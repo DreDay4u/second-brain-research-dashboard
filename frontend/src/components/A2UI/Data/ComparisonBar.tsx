@@ -54,31 +54,31 @@ export function ComparisonBar({
   const percentB = (value_b / maxVal) * 100;
 
   return (
-    <div className="space-y-2">
-      <div className="text-sm font-medium dark:text-slate-200">{label}</div>
+    <div className="space-y-3 p-4 rounded-xl bg-secondary/30 border border-blue-500/10">
+      <div className="text-sm font-medium text-blue-200">{label}</div>
       <div className="flex items-center gap-2">
-        <span className="text-xs w-20 text-right text-muted-foreground dark:text-slate-400">
+        <span className="text-xs w-20 text-right text-blue-300/70">
           {label_a}
         </span>
-        <div className="flex-1 h-6 bg-muted dark:bg-slate-800 rounded-full overflow-hidden flex">
+        <div className="flex-1 h-6 bg-secondary rounded-full overflow-hidden flex">
           <div
-            className={`bg-${color_a}-500 h-full transition-all`}
+            className="bg-gradient-to-r from-blue-600 to-blue-400 h-full transition-all duration-500 shadow-lg shadow-blue-500/30"
             style={{ width: `${percentA}%` }}
           />
         </div>
-        <span className="text-xs w-12 font-semibold dark:text-slate-100">{value_a}</span>
+        <span className="text-xs w-12 font-semibold text-white">{value_a}</span>
       </div>
       <div className="flex items-center gap-2">
-        <span className="text-xs w-20 text-right text-muted-foreground dark:text-slate-400">
+        <span className="text-xs w-20 text-right text-blue-300/70">
           {label_b}
         </span>
-        <div className="flex-1 h-6 bg-muted dark:bg-slate-800 rounded-full overflow-hidden flex">
+        <div className="flex-1 h-6 bg-secondary rounded-full overflow-hidden flex">
           <div
-            className={`bg-${color_b}-500 h-full transition-all`}
+            className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full transition-all duration-500 shadow-lg shadow-cyan-500/30"
             style={{ width: `${percentB}%` }}
           />
         </div>
-        <span className="text-xs w-12 font-semibold dark:text-slate-100">{value_b}</span>
+        <span className="text-xs w-12 font-semibold text-white">{value_b}</span>
       </div>
     </div>
   );

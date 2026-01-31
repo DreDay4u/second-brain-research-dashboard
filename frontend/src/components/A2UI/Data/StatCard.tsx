@@ -48,26 +48,26 @@ export function StatCard({
 }: StatCardProps): React.ReactElement {
   const getTrendColor = () => {
     if (!trend) return '';
-    if (trend.startsWith('+')) return 'text-green-500';
-    if (trend.startsWith('-')) return 'text-red-500';
+    if (trend.startsWith('+')) return 'text-emerald-400';
+    if (trend.startsWith('-')) return 'text-red-400';
     return 'text-muted-foreground';
   };
 
   return (
-    <Card className={`${color ? `border-${color}-500` : ''} ${backgroundColor || ''} group cursor-default`}>
+    <Card className={`${color ? `border-${color}-500/50` : 'border-blue-500/20'} ${backgroundColor || 'bg-gradient-to-br from-card to-secondary/30'} group cursor-default hover:border-blue-500/40`}>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-start">
-          <CardDescription>{label}</CardDescription>
+          <CardDescription className="text-blue-300/80">{label}</CardDescription>
           {icon && <span className="text-2xl transition-transform duration-200 group-hover:scale-110">{icon}</span>}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-bold">
+        <div className="text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
           {value}
-          {unit && <span className="text-lg text-muted-foreground ml-1">{unit}</span>}
+          {unit && <span className="text-lg text-blue-300/60 ml-1">{unit}</span>}
         </div>
         {trend && (
-          <p className={`text-sm mt-1 ${getTrendColor()}`}>
+          <p className={`text-sm mt-1 font-medium ${getTrendColor()}`}>
             {trend}
           </p>
         )}

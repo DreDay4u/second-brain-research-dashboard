@@ -65,7 +65,7 @@ export function ToolCard({
   };
 
   return (
-    <Card>
+    <Card className="bg-gradient-to-br from-card to-secondary/30 border-blue-500/20">
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex items-start gap-3 flex-1">
@@ -80,27 +80,27 @@ export function ToolCard({
               />
             )}
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base">{name}</CardTitle>
+              <CardTitle className="text-base text-white">{name}</CardTitle>
               <div className="flex items-center gap-2 mt-1 flex-wrap">
-                {category && <CardDescription>{category}</CardDescription>}
+                {category && <CardDescription className="text-blue-300/80">{category}</CardDescription>}
                 <div className="flex items-center text-lg leading-none">
                   {renderStars()}
-                  <span className="text-xs text-muted-foreground ml-1">({rating})</span>
+                  <span className="text-xs text-blue-200/60 ml-1">({rating})</span>
                 </div>
               </div>
             </div>
           </div>
-          {pricing && <Badge className="shrink-0">{pricing}</Badge>}
+          {pricing && <Badge className="shrink-0 bg-blue-500/20 text-blue-300 border-blue-400/30 hover:bg-blue-500/30">{pricing}</Badge>}
         </div>
       </CardHeader>
       {description && (
         <CardContent>
-          <p className="text-sm text-muted-foreground">{description}</p>
+          <p className="text-sm text-blue-200/70">{description}</p>
         </CardContent>
       )}
       {url && (
         <CardFooter>
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild variant="outline" className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 hover:border-blue-400/50">
             <a href={url} target="_blank" rel="noopener noreferrer">
               Visit Tool
             </a>

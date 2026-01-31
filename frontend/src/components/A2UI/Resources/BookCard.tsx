@@ -64,7 +64,7 @@ export function BookCard({
   };
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden bg-gradient-to-br from-card to-secondary/30 border-blue-500/20">
       {!imageError && coverImage ? (
         <img
           src={coverImage}
@@ -74,29 +74,29 @@ export function BookCard({
           onError={() => setImageError(true)}
         />
       ) : (
-        <div className="w-full h-64 bg-muted flex items-center justify-center">
+        <div className="w-full h-64 bg-blue-950/30 flex items-center justify-center">
           <div className="text-center p-4">
-            <span className="text-6xl text-muted-foreground/30">📚</span>
-            <p className="text-xs text-muted-foreground mt-2">No cover available</p>
+            <span className="text-6xl text-blue-400/30">📚</span>
+            <p className="text-xs text-blue-300/50 mt-2">No cover available</p>
           </div>
         </div>
       )}
       <CardHeader>
-        <CardTitle className="text-base line-clamp-2">{title}</CardTitle>
+        <CardTitle className="text-base line-clamp-2 text-white">{title}</CardTitle>
         <CardDescription>
           <div className="space-y-1">
-            <div>by {author}</div>
+            <div className="text-blue-300/80">by {author}</div>
             <div className="flex items-center gap-2">
               <div className="flex items-center text-base leading-none">
                 {renderStars()}
               </div>
-              <span className="text-xs">
+              <span className="text-xs text-blue-200/60">
                 {rating}/5
               </span>
               {year && (
                 <>
-                  <span className="text-xs">•</span>
-                  <span className="text-xs">{year}</span>
+                  <span className="text-xs text-blue-200/60">•</span>
+                  <span className="text-xs text-blue-200/60">{year}</span>
                 </>
               )}
             </div>
@@ -105,14 +105,14 @@ export function BookCard({
       </CardHeader>
       {description && (
         <CardContent>
-          <p className="text-sm text-muted-foreground line-clamp-3">{description}</p>
+          <p className="text-sm text-blue-200/70 line-clamp-3">{description}</p>
         </CardContent>
       )}
       {url && (
         <CardFooter>
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild variant="outline" className="w-full border-blue-500/30 text-blue-300 hover:bg-blue-500/20 hover:text-blue-200 hover:border-blue-400/50">
             <a href={url} target="_blank" rel="noopener noreferrer">
-              View Book
+              Read More
             </a>
           </Button>
         </CardFooter>

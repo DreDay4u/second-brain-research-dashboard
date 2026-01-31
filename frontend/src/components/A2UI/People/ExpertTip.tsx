@@ -40,24 +40,24 @@ export function ExpertTip({
   icon,
 }: ExpertTipProps): React.ReactElement {
   return (
-    <Card className="bg-blue-500/10 border-blue-500 dark:bg-blue-500/20 dark:border-blue-500/50">
+    <Card className="bg-gradient-to-br from-card to-secondary/30 border-l-4 border-blue-500 border-blue-500/20">
       <CardHeader>
         <div className="flex items-center gap-2">
-          <span className="text-xl">{icon || '💡'}</span>
-          <CardTitle className="text-sm dark:text-slate-100">
+          <span className="text-xl text-blue-400">{icon || '💡'}</span>
+          <CardTitle className="text-sm text-white">
             {title || 'Expert Tip'}
           </CardTitle>
           {category && (
-            <Badge variant="secondary" className="dark:bg-slate-800 dark:text-slate-300">
+            <Badge variant="secondary" className="bg-blue-950/50 text-blue-200 border border-blue-500/30">
               {category}
             </Badge>
           )}
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <p className="text-sm dark:text-slate-200">{tip}</p>
+        <p className="text-sm text-slate-200">{tip}</p>
         {expert && (
-          <p className="text-xs text-muted-foreground dark:text-slate-400 mt-2 pt-2 border-t dark:border-slate-700">
+          <p className="text-xs text-blue-300 mt-2 pt-2 border-t border-blue-500/20">
             — {expert}
           </p>
         )}
