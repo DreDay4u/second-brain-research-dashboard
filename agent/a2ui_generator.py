@@ -155,6 +155,11 @@ VALID_COMPONENT_TYPES = {
     "a2ui.TagCloud",
     "a2ui.CategoryBadge",
     "a2ui.DifficultyBadge",
+    "a2ui.Tag",
+    "a2ui.Badge",
+    "a2ui.CategoryTag",
+    "a2ui.StatusIndicator",
+    "a2ui.PriorityBadge",
 }
 
 
@@ -4520,6 +4525,422 @@ def generate_sidebar(
     return component
 
 
+# ============================================================================
+# TAG & BADGE GENERATORS
+# ============================================================================
+
+
+def generate_tag(
+    label: str,
+    type: str = "default",
+    icon: str | None = None,
+    removable: bool = False
+) -> A2UIComponent:
+    """
+    Generate a Tag A2UI component for labels and categorization.
+
+    Creates a basic tag/label component for tagging, labeling, and categorizing
+    content. Supports various visual styles, optional icons, and removable/dismissible
+    functionality.
+
+    Args:
+        label: Text label for the tag
+        type: Visual style variant (default, primary, success, warning, error, info)
+        icon: Optional icon identifier to display with the tag
+        removable: Whether the tag can be removed/dismissed (default: False)
+
+    Returns:
+        A2UIComponent configured as Tag
+
+    Raises:
+        ValueError: If label is empty
+        ValueError: If type is not a valid tag type
+
+    Examples:
+        >>> # Basic default tag
+        >>> tag = generate_tag(label="JavaScript")
+
+        >>> # Primary tag with icon
+        >>> tag = generate_tag(
+        ...     label="Featured",
+        ...     type="primary",
+        ...     icon="star"
+        ... )
+
+        >>> # Success tag
+        >>> tag = generate_tag(
+        ...     label="Completed",
+        ...     type="success",
+        ...     icon="check"
+        ... )
+
+        >>> # Removable tag
+        >>> tag = generate_tag(
+        ...     label="Filter: Python",
+        ...     type="info",
+        ...     removable=True
+        ... )
+
+        >>> # Warning tag with icon
+        >>> tag = generate_tag(
+        ...     label="Deprecated",
+        ...     type="warning",
+        ...     icon="alert"
+        ... )
+    """
+    # Validate label
+    if not label or not label.strip():
+        raise ValueError("Tag label cannot be empty")
+
+    # Validate type
+    valid_types = ["default", "primary", "success", "warning", "error", "info"]
+    if type not in valid_types:
+        raise ValueError(
+            f"Tag type must be one of {valid_types}, got: {type}"
+        )
+
+    props = {
+        "label": label.strip(),
+        "type": type,
+    }
+
+    # Add optional icon
+    if icon:
+        props["icon"] = icon
+
+    # Add removable flag if true
+    if removable:
+        props["removable"] = True
+
+    return generate_component("a2ui.Tag", props)
+
+
+def generate_badge(
+    label: str,
+    count: int,
+    style: str = "default",
+    size: str = "medium"
+) -> A2UIComponent:
+    """
+    Generate a Badge A2UI component with count indicator.
+
+    Creates a badge component that displays a label with a count/number indicator.
+    Commonly used for notification counts, unread items, or numerical metrics
+    associated with categories or filters.
+
+    Args:
+        label: Text label for the badge
+        count: Numerical count to display
+        style: Visual style variant (default, primary, success, warning, error)
+        size: Size variant (small, medium, large)
+
+    Returns:
+        A2UIComponent configured as Badge
+
+    Raises:
+        ValueError: If label is empty
+        ValueError: If count is negative
+        ValueError: If style is not a valid badge style
+        ValueError: If size is not a valid size
+
+    Examples:
+        >>> # Basic badge with count
+        >>> badge = generate_badge(label="Notifications", count=5)
+
+        >>> # Primary style small badge
+        >>> badge = generate_badge(
+        ...     label="Unread",
+        ...     count=23,
+        ...     style="primary",
+        ...     size="small"
+        ... )
+
+        >>> # Warning badge
+        >>> badge = generate_badge(
+        ...     label="Pending",
+        ...     count=3,
+        ...     style="warning"
+        ... )
+
+        >>> # Large success badge
+        >>> badge = generate_badge(
+        ...     label="Completed",
+        ...     count=100,
+        ...     style="success",
+        ...     size="large"
+        ... )
+
+        >>> # Error badge
+        >>> badge = generate_badge(
+        ...     label="Failed",
+        ...     count=2,
+        ...     style="error"
+        ... )
+    """
+    # Validate label
+    if not label or not label.strip():
+        raise ValueError("Badge label cannot be empty")
+
+    # Validate count
+    if count < 0:
+        raise ValueError(
+            f"Badge count must be non-negative, got: {count}"
+        )
+
+    # Validate style
+    valid_styles = ["default", "primary", "success", "warning", "error"]
+    if style not in valid_styles:
+        raise ValueError(
+            f"Badge style must be one of {valid_styles}, got: {style}"
+        )
+
+    # Validate size
+    valid_sizes = ["small", "medium", "large"]
+    if size not in valid_sizes:
+        raise ValueError(
+            f"Badge size must be one of {valid_sizes}, got: {size}"
+        )
+
+    props = {
+        "label": label.strip(),
+        "count": count,
+        "style": style,
+        "size": size,
+    }
+
+    return generate_component("a2ui.Badge", props)
+
+
+def generate_category_tag(
+    name: str,
+    color: str | None = None,
+    icon: str | None = None
+) -> A2UIComponent:
+    """
+    Generate a CategoryTag A2UI component for categorization.
+
+    Creates a category tag component with optional custom color and icon.
+    Used for content categorization, topic classification, and filtering.
+    Supports semantic color naming or hex color codes.
+
+    Args:
+        name: Category name/label
+        color: Optional color (semantic name or hex code, e.g., "blue", "#3B82F6")
+        icon: Optional icon identifier to display with the category
+
+    Returns:
+        A2UIComponent configured as CategoryTag
+
+    Raises:
+        ValueError: If name is empty
+        ValueError: If color format is invalid (when provided)
+
+    Examples:
+        >>> # Basic category tag
+        >>> tag = generate_category_tag(name="Technology")
+
+        >>> # Category with color
+        >>> tag = generate_category_tag(
+        ...     name="AI & ML",
+        ...     color="blue"
+        ... )
+
+        >>> # Category with icon and color
+        >>> tag = generate_category_tag(
+        ...     name="Science",
+        ...     color="purple",
+        ...     icon="flask"
+        ... )
+
+        >>> # Category with hex color
+        >>> tag = generate_category_tag(
+        ...     name="Business",
+        ...     color="#10B981"
+        ... )
+
+        >>> # Category with icon only
+        >>> tag = generate_category_tag(
+        ...     name="Education",
+        ...     icon="book"
+        ... )
+    """
+    # Validate name
+    if not name or not name.strip():
+        raise ValueError("CategoryTag name cannot be empty")
+
+    # Validate color format if provided
+    if color:
+        color = color.strip()
+        # Check if it's a hex color (starts with #)
+        if color.startswith("#"):
+            # Validate hex format (#RGB or #RRGGBB)
+            if not re.match(r'^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$', color):
+                raise ValueError(
+                    f"Invalid hex color format: {color}. "
+                    "Use #RGB or #RRGGBB format (e.g., #3B82F6)"
+                )
+        # Otherwise assume it's a semantic color name (blue, red, green, etc.)
+        # No further validation needed for semantic names
+
+    props = {
+        "name": name.strip(),
+    }
+
+    # Add optional color
+    if color:
+        props["color"] = color
+
+    # Add optional icon
+    if icon:
+        props["icon"] = icon
+
+    return generate_component("a2ui.CategoryTag", props)
+
+
+def generate_status_indicator(
+    status: str,
+    label: str | None = None
+) -> A2UIComponent:
+    """
+    Generate a StatusIndicator A2UI component for status display.
+
+    Creates a status indicator badge showing system or item status with
+    appropriate visual styling. Supports standard status types with
+    semantic colors and optional custom labels.
+
+    Args:
+        status: Status type (success, warning, error, info, loading)
+        label: Optional custom label (defaults to capitalized status)
+
+    Returns:
+        A2UIComponent configured as StatusIndicator
+
+    Raises:
+        ValueError: If status is not a valid status type
+
+    Examples:
+        >>> # Success status
+        >>> indicator = generate_status_indicator(status="success")
+
+        >>> # Success with custom label
+        >>> indicator = generate_status_indicator(
+        ...     status="success",
+        ...     label="Deployment Complete"
+        ... )
+
+        >>> # Warning status
+        >>> indicator = generate_status_indicator(
+        ...     status="warning",
+        ...     label="Maintenance Mode"
+        ... )
+
+        >>> # Error status
+        >>> indicator = generate_status_indicator(
+        ...     status="error",
+        ...     label="Connection Failed"
+        ... )
+
+        >>> # Info status
+        >>> indicator = generate_status_indicator(
+        ...     status="info",
+        ...     label="Processing"
+        ... )
+
+        >>> # Loading status
+        >>> indicator = generate_status_indicator(
+        ...     status="loading",
+        ...     label="Fetching data..."
+        ... )
+    """
+    # Validate status
+    valid_statuses = ["success", "warning", "error", "info", "loading"]
+    if status not in valid_statuses:
+        raise ValueError(
+            f"StatusIndicator status must be one of {valid_statuses}, got: {status}"
+        )
+
+    props = {
+        "status": status,
+    }
+
+    # Add optional label
+    if label is not None:
+        if not label.strip():
+            raise ValueError("StatusIndicator label cannot be empty when provided")
+        props["label"] = label.strip()
+
+    return generate_component("a2ui.StatusIndicator", props)
+
+
+def generate_priority_badge(
+    level: str,
+    label: str | None = None
+) -> A2UIComponent:
+    """
+    Generate a PriorityBadge A2UI component for priority levels.
+
+    Creates a priority badge showing priority levels with appropriate
+    visual styling and colors. Used for task management, issue tracking,
+    and content prioritization.
+
+    Args:
+        level: Priority level (low, medium, high, critical)
+        label: Optional custom label (defaults to capitalized level)
+
+    Returns:
+        A2UIComponent configured as PriorityBadge
+
+    Raises:
+        ValueError: If level is not a valid priority level
+
+    Examples:
+        >>> # Low priority
+        >>> badge = generate_priority_badge(level="low")
+
+        >>> # Medium priority with custom label
+        >>> badge = generate_priority_badge(
+        ...     level="medium",
+        ...     label="Normal Priority"
+        ... )
+
+        >>> # High priority
+        >>> badge = generate_priority_badge(
+        ...     level="high",
+        ...     label="Urgent"
+        ... )
+
+        >>> # Critical priority
+        >>> badge = generate_priority_badge(
+        ...     level="critical",
+        ...     label="Critical - Act Now"
+        ... )
+
+        >>> # Low priority with custom label
+        >>> badge = generate_priority_badge(
+        ...     level="low",
+        ...     label="Nice to Have"
+        ... )
+    """
+    # Validate level
+    valid_levels = ["low", "medium", "high", "critical"]
+    if level not in valid_levels:
+        raise ValueError(
+            f"PriorityBadge level must be one of {valid_levels}, got: {level}"
+        )
+
+    props = {
+        "level": level,
+    }
+
+    # Add optional label
+    if label is not None:
+        if not label.strip():
+            raise ValueError("PriorityBadge label cannot be empty when provided")
+        props["label"] = label.strip()
+
+    return generate_component("a2ui.PriorityBadge", props)
+
+
 # Export public API
 __all__ = [
     "A2UIComponent",
@@ -4589,4 +5010,10 @@ __all__ = [
     "generate_accordion",
     "generate_carousel",
     "generate_sidebar",
+    # Tag generators
+    "generate_tag",
+    "generate_badge",
+    "generate_category_tag",
+    "generate_status_indicator",
+    "generate_priority_badge",
 ]
