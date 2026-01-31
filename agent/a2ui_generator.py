@@ -1881,6 +1881,541 @@ def generate_bullet_point(
     return generate_component("a2ui.BulletPoint", props)
 
 
+# Resource Component Generators
+
+def extract_domain(url: str) -> str:
+    """
+    Extract domain from any URL.
+
+    Extracts the domain name from a URL by parsing the netloc component.
+    Handles various URL formats and removes www. prefix if present.
+
+    Args:
+        url: URL string to extract domain from
+
+    Returns:
+        Domain name (e.g., "example.com")
+
+    Raises:
+        ValueError: If URL is invalid or empty
+
+    Examples:
+        >>> extract_domain("https://example.com/path")
+        "example.com"
+        >>> extract_domain("https://www.github.com/user/repo")
+        "github.com"
+        >>> extract_domain("http://subdomain.example.com:8080/page")
+        "subdomain.example.com"
+    """
+    if not url or not url.strip():
+        raise ValueError("URL cannot be empty")
+
+    # Ensure URL has scheme for parsing
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"URL must start with http:// or https://, got: {url}")
+
+    # Parse URL
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    domain = parsed.netloc
+
+    if not domain:
+        raise ValueError(f"Could not extract domain from URL: {url}")
+
+    # Remove port if present
+    if ':' in domain:
+        domain = domain.split(':')[0]
+
+    # Remove www. prefix if present
+    if domain.startswith('www.'):
+        domain = domain[4:]
+
+    return domain
+
+
+def extract_github_repo_info(url_or_owner_repo: str) -> dict[str, str]:
+    """
+    Extract GitHub repository information from URL or owner/repo string.
+
+    Parses various GitHub URL formats or "owner/repo" string format
+    to extract owner and repository name.
+
+    Supported formats:
+    - https://github.com/owner/repo
+    - http://github.com/owner/repo
+    - github.com/owner/repo
+    - owner/repo
+
+    Args:
+        url_or_owner_repo: GitHub URL or "owner/repo" string
+
+    Returns:
+        Dictionary with keys: "owner", "repo", "url"
+
+    Raises:
+        ValueError: If format is invalid or cannot be parsed
+
+    Examples:
+        >>> extract_github_repo_info("https://github.com/facebook/react")
+        {"owner": "facebook", "repo": "react", "url": "https://github.com/facebook/react"}
+        >>> extract_github_repo_info("facebook/react")
+        {"owner": "facebook", "repo": "react", "url": "https://github.com/facebook/react"}
+        >>> extract_github_repo_info("github.com/torvalds/linux")
+        {"owner": "torvalds", "repo": "linux", "url": "https://github.com/torvalds/linux"}
+    """
+    if not url_or_owner_repo or not url_or_owner_repo.strip():
+        raise ValueError("GitHub URL or owner/repo cannot be empty")
+
+    input_str = url_or_owner_repo.strip()
+
+    # Pattern 1: Full GitHub URL
+    github_url_pattern = r'(?:https?://)?(?:www\.)?github\.com/([^/]+)/([^/\s]+)'
+    match = re.match(github_url_pattern, input_str)
+
+    if match:
+        owner = match.group(1)
+        repo = match.group(2).rstrip('/')
+        # Remove .git suffix if present
+        if repo.endswith('.git'):
+            repo = repo[:-4]
+        return {
+            "owner": owner,
+            "repo": repo,
+            "url": f"https://github.com/{owner}/{repo}"
+        }
+
+    # Pattern 2: owner/repo format
+    owner_repo_pattern = r'^([^/\s]+)/([^/\s]+)$'
+    match = re.match(owner_repo_pattern, input_str)
+
+    if match:
+        owner = match.group(1)
+        repo = match.group(2)
+        return {
+            "owner": owner,
+            "repo": repo,
+            "url": f"https://github.com/{owner}/{repo}"
+        }
+
+    raise ValueError(
+        f"Invalid GitHub URL or owner/repo format: {input_str}. "
+        "Expected formats: 'https://github.com/owner/repo', 'github.com/owner/repo', or 'owner/repo'"
+    )
+
+
+def generate_link_card(
+    title: str,
+    url: str,
+    description: str | None = None,
+    domain: str | None = None,
+    image_url: str | None = None,
+    tags: list[str] | None = None
+) -> A2UIComponent:
+    """
+    Generate a LinkCard A2UI component for external resource links.
+
+    Creates a link card component for bookmarks, curated links, and resource
+    collections. Automatically extracts domain from URL if not provided.
+
+    Args:
+        title: Link title/heading
+        url: Link URL (must be valid HTTP/HTTPS URL)
+        description: Optional link description or summary
+        domain: Optional domain name (auto-extracted from URL if not provided)
+        image_url: Optional preview/thumbnail image URL
+        tags: Optional list of tags (max 5)
+
+    Returns:
+        A2UIComponent configured as LinkCard
+
+    Raises:
+        ValueError: If URL is invalid format
+        ValueError: If tags list exceeds 5 items
+
+    Examples:
+        >>> # Basic link card
+        >>> card = generate_link_card(
+        ...     title="React Documentation",
+        ...     url="https://react.dev/learn"
+        ... )
+
+        >>> # Link card with all metadata
+        >>> card = generate_link_card(
+        ...     title="Introduction to Machine Learning",
+        ...     url="https://example.com/ml-intro",
+        ...     description="Comprehensive guide to ML fundamentals",
+        ...     domain="example.com",
+        ...     image_url="https://example.com/ml-preview.jpg",
+        ...     tags=["machine-learning", "tutorial", "beginner"]
+        ... )
+    """
+    # Validate URL format
+    if not url or not url.strip():
+        raise ValueError("LinkCard requires a valid URL")
+
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"URL must start with http:// or https://, got: {url}")
+
+    # Auto-extract domain if not provided
+    if not domain:
+        domain = extract_domain(url)
+
+    # Validate tags
+    if tags and len(tags) > 5:
+        raise ValueError(
+            f"LinkCard supports up to 5 tags, got {len(tags)}. "
+            "Consider using only the most relevant tags."
+        )
+
+    props = {
+        "title": title,
+        "url": url,
+        "domain": domain,
+    }
+
+    # Add optional fields
+    if description:
+        props["description"] = description
+
+    if image_url:
+        props["imageUrl"] = image_url
+
+    if tags:
+        props["tags"] = tags
+
+    return generate_component("a2ui.LinkCard", props)
+
+
+def generate_tool_card(
+    name: str,
+    description: str,
+    url: str,
+    category: str | None = None,
+    pricing: str | None = None,
+    icon_url: str | None = None,
+    features: list[str] | None = None
+) -> A2UIComponent:
+    """
+    Generate a ToolCard A2UI component for software tools/services.
+
+    Creates a tool card component for tool recommendations, tech stacks,
+    and resource catalogs. Supports categorization and feature highlights.
+
+    Args:
+        name: Tool name (e.g., "VS Code", "Figma", "GitHub")
+        description: Tool description/summary
+        url: Tool website URL (must be valid HTTP/HTTPS URL)
+        category: Optional category - "ide", "analytics", "design", "productivity", etc.
+        pricing: Optional pricing model - "free", "freemium", "paid"
+        icon_url: Optional tool icon/logo URL
+        features: Optional list of key features (max 5)
+
+    Returns:
+        A2UIComponent configured as ToolCard
+
+    Raises:
+        ValueError: If URL is invalid format
+        ValueError: If pricing is not valid
+        ValueError: If features list exceeds 5 items
+
+    Examples:
+        >>> # Basic tool card
+        >>> card = generate_tool_card(
+        ...     name="VS Code",
+        ...     description="Free code editor from Microsoft",
+        ...     url="https://code.visualstudio.com"
+        ... )
+
+        >>> # Tool card with all features
+        >>> card = generate_tool_card(
+        ...     name="Figma",
+        ...     description="Collaborative interface design tool",
+        ...     url="https://www.figma.com",
+        ...     category="design",
+        ...     pricing="freemium",
+        ...     icon_url="https://www.figma.com/favicon.ico",
+        ...     features=["Real-time collaboration", "Prototyping", "Design systems"]
+        ... )
+    """
+    # Validate URL format
+    if not url or not url.strip():
+        raise ValueError("ToolCard requires a valid URL")
+
+    if not url.startswith(("http://", "https://")):
+        raise ValueError(f"URL must start with http:// or https://, got: {url}")
+
+    # Validate pricing if provided
+    if pricing:
+        valid_pricing = {"free", "freemium", "paid"}
+        if pricing not in valid_pricing:
+            raise ValueError(
+                f"Invalid pricing: {pricing}. "
+                f"Must be one of: {', '.join(valid_pricing)}"
+            )
+
+    # Validate features
+    if features and len(features) > 5:
+        raise ValueError(
+            f"ToolCard supports up to 5 features, got {len(features)}. "
+            "Consider highlighting only the most important features."
+        )
+
+    props = {
+        "name": name,
+        "description": description,
+        "url": url,
+    }
+
+    # Add optional fields
+    if category:
+        props["category"] = category
+
+    if pricing:
+        props["pricing"] = pricing
+
+    if icon_url:
+        props["iconUrl"] = icon_url
+
+    if features:
+        props["features"] = features
+
+    return generate_component("a2ui.ToolCard", props)
+
+
+def generate_book_card(
+    title: str,
+    author: str,
+    year: int | None = None,
+    isbn: str | None = None,
+    url: str | None = None,
+    cover_image_url: str | None = None,
+    rating: float | None = None,
+    description: str | None = None
+) -> A2UIComponent:
+    """
+    Generate a BookCard A2UI component for books/publications.
+
+    Creates a book card component for book recommendations and reading lists.
+    Supports ISBN validation and rating display.
+
+    Args:
+        title: Book title
+        author: Book author name(s)
+        year: Optional publication year
+        isbn: Optional ISBN (10 or 13 digits)
+        url: Optional URL to purchase/view the book
+        cover_image_url: Optional book cover image URL
+        rating: Optional rating (0-5 scale)
+        description: Optional book description/summary
+
+    Returns:
+        A2UIComponent configured as BookCard
+
+    Raises:
+        ValueError: If ISBN format is invalid (must be 10 or 13 digits)
+        ValueError: If rating is not between 0 and 5
+        ValueError: If URL is provided but invalid format
+
+    Examples:
+        >>> # Basic book card
+        >>> card = generate_book_card(
+        ...     title="Clean Code",
+        ...     author="Robert C. Martin"
+        ... )
+
+        >>> # Book card with all metadata
+        >>> card = generate_book_card(
+        ...     title="The Pragmatic Programmer",
+        ...     author="Andrew Hunt, David Thomas",
+        ...     year=2019,
+        ...     isbn="9780135957059",
+        ...     url="https://pragprog.com/titles/tpp20/",
+        ...     cover_image_url="https://pragprog.com/titles/tpp20/tpp20.jpg",
+        ...     rating=4.5,
+        ...     description="Your journey to mastery"
+        ... )
+    """
+    # Validate ISBN if provided
+    if isbn:
+        # Remove hyphens and spaces
+        isbn_clean = isbn.replace('-', '').replace(' ', '')
+        if not (len(isbn_clean) == 10 or len(isbn_clean) == 13):
+            raise ValueError(
+                f"Invalid ISBN format: {isbn}. "
+                "ISBN must be 10 or 13 digits (hyphens/spaces allowed)"
+            )
+        if not isbn_clean.isdigit():
+            raise ValueError(
+                f"Invalid ISBN format: {isbn}. "
+                "ISBN must contain only digits (and optional hyphens/spaces)"
+            )
+
+    # Validate rating if provided
+    if rating is not None:
+        if rating < 0 or rating > 5:
+            raise ValueError(
+                f"Rating must be between 0 and 5, got: {rating}"
+            )
+
+    # Validate URL if provided
+    if url and not url.startswith(("http://", "https://")):
+        raise ValueError(f"URL must start with http:// or https://, got: {url}")
+
+    props = {
+        "title": title,
+        "author": author,
+    }
+
+    # Add optional fields
+    if year is not None:
+        props["year"] = year
+
+    if isbn:
+        props["isbn"] = isbn
+
+    if url:
+        props["url"] = url
+
+    if cover_image_url:
+        props["coverImageUrl"] = cover_image_url
+
+    if rating is not None:
+        props["rating"] = rating
+
+    if description:
+        props["description"] = description
+
+    return generate_component("a2ui.BookCard", props)
+
+
+def generate_repo_card(
+    name: str,
+    owner: str | None = None,
+    repo_url: str | None = None,
+    description: str | None = None,
+    language: str | None = None,
+    stars: int | None = None,
+    fork_count: int | None = None,
+    topics: list[str] | None = None
+) -> A2UIComponent:
+    """
+    Generate a RepoCard A2UI component for GitHub repositories.
+
+    Creates a repository card component for code repositories and open-source
+    projects. Automatically constructs GitHub URL from owner + name if needed.
+    Supports GitHub metadata like stars, forks, and topics.
+
+    Args:
+        name: Repository name (e.g., "react", "tensorflow")
+        owner: Optional GitHub username/org (e.g., "facebook", "tensorflow")
+        repo_url: Optional repository URL (can auto-construct from owner + name)
+        description: Optional repository description
+        language: Optional primary programming language
+        stars: Optional star count
+        fork_count: Optional fork count
+        topics: Optional list of repository topics (max 5)
+
+    Returns:
+        A2UIComponent configured as RepoCard
+
+    Raises:
+        ValueError: If neither repo_url nor (owner + name) is provided
+        ValueError: If repo_url is provided but invalid GitHub URL
+        ValueError: If topics list exceeds 5 items
+        ValueError: If stars or fork_count is negative
+
+    Examples:
+        >>> # Repository from URL
+        >>> card = generate_repo_card(
+        ...     name="react",
+        ...     repo_url="https://github.com/facebook/react"
+        ... )
+
+        >>> # Repository from owner + name
+        >>> card = generate_repo_card(
+        ...     name="tensorflow",
+        ...     owner="tensorflow",
+        ...     description="Open source machine learning framework",
+        ...     language="Python",
+        ...     stars=185000,
+        ...     fork_count=74000,
+        ...     topics=["machine-learning", "deep-learning", "python"]
+        ... )
+
+        >>> # Repository with all metadata
+        >>> card = generate_repo_card(
+        ...     name="vscode",
+        ...     owner="microsoft",
+        ...     description="Visual Studio Code",
+        ...     language="TypeScript",
+        ...     stars=150000,
+        ...     fork_count=26000,
+        ...     topics=["editor", "typescript", "electron"]
+        ... )
+    """
+    # Extract repo info from URL if provided
+    if repo_url:
+        try:
+            repo_info = extract_github_repo_info(repo_url)
+            if not owner:
+                owner = repo_info["owner"]
+            # Use canonical URL
+            repo_url = repo_info["url"]
+        except ValueError:
+            # Not a GitHub URL, use as-is
+            if not repo_url.startswith(("http://", "https://")):
+                raise ValueError(f"repo_url must start with http:// or https://, got: {repo_url}")
+
+    # Construct GitHub URL from owner + name if not provided
+    if not repo_url:
+        if not owner:
+            raise ValueError(
+                "RepoCard requires either repo_url or both owner and name"
+            )
+        repo_url = f"https://github.com/{owner}/{name}"
+
+    # Validate topics
+    if topics and len(topics) > 5:
+        raise ValueError(
+            f"RepoCard supports up to 5 topics, got {len(topics)}. "
+            "Consider using only the most relevant topics."
+        )
+
+    # Validate stars
+    if stars is not None and stars < 0:
+        raise ValueError(f"Star count cannot be negative, got: {stars}")
+
+    # Validate fork_count
+    if fork_count is not None and fork_count < 0:
+        raise ValueError(f"Fork count cannot be negative, got: {fork_count}")
+
+    props = {
+        "name": name,
+        "repoUrl": repo_url,
+    }
+
+    # Add optional fields
+    if owner:
+        props["owner"] = owner
+
+    if description:
+        props["description"] = description
+
+    if language:
+        props["language"] = language
+
+    if stars is not None:
+        props["stars"] = stars
+
+    if fork_count is not None:
+        props["forkCount"] = fork_count
+
+    if topics:
+        props["topics"] = topics
+
+    return generate_component("a2ui.RepoCard", props)
+
+
 # Export public API
 __all__ = [
     "A2UIComponent",
@@ -1914,4 +2449,11 @@ __all__ = [
     "generate_checklist_item",
     "generate_pro_con_item",
     "generate_bullet_point",
+    # Resource generators
+    "extract_domain",
+    "extract_github_repo_info",
+    "generate_link_card",
+    "generate_tool_card",
+    "generate_book_card",
+    "generate_repo_card",
 ]

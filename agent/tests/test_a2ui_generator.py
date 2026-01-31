@@ -45,6 +45,13 @@ from a2ui_generator import (
     generate_checklist_item,
     generate_pro_con_item,
     generate_bullet_point,
+    # Resource generators
+    extract_domain,
+    extract_github_repo_info,
+    generate_link_card,
+    generate_tool_card,
+    generate_book_card,
+    generate_repo_card,
 )
 
 
@@ -3327,3 +3334,557 @@ class TestListIntegration:
         assert json_data[1]["type"] == "a2ui.ChecklistItem"
         assert json_data[2]["type"] == "a2ui.ProConItem"
         assert json_data[3]["type"] == "a2ui.BulletPoint"
+
+
+class TestResourceGenerators:
+    """Test suite for resource component generators (LinkCard, ToolCard, BookCard, RepoCard)."""
+
+    def test_extract_domain_basic(self):
+        """Test basic domain extraction."""
+        assert extract_domain("https://example.com/path") == "example.com"
+        assert extract_domain("http://example.com") == "example.com"
+        assert extract_domain("https://www.github.com/user/repo") == "github.com"
+
+    def test_extract_domain_with_subdomain(self):
+        """Test domain extraction with subdomains."""
+        assert extract_domain("https://api.example.com/endpoint") == "api.example.com"
+        assert extract_domain("https://subdomain.example.com:8080/page") == "subdomain.example.com"
+
+    def test_extract_domain_removes_www(self):
+        """Test that www. prefix is removed."""
+        assert extract_domain("https://www.example.com") == "example.com"
+        assert extract_domain("http://www.test.org/page") == "test.org"
+
+    def test_extract_domain_invalid_url(self):
+        """Test domain extraction with invalid URLs."""
+        with pytest.raises(ValueError, match="URL must start with http"):
+            extract_domain("example.com")
+
+        with pytest.raises(ValueError, match="URL cannot be empty"):
+            extract_domain("")
+
+        with pytest.raises(ValueError, match="Could not extract domain"):
+            extract_domain("http://")
+
+    def test_extract_github_repo_info_from_url(self):
+        """Test GitHub repo info extraction from URLs."""
+        result = extract_github_repo_info("https://github.com/facebook/react")
+        assert result["owner"] == "facebook"
+        assert result["repo"] == "react"
+        assert result["url"] == "https://github.com/facebook/react"
+
+    def test_extract_github_repo_info_from_owner_repo(self):
+        """Test GitHub repo info extraction from owner/repo format."""
+        result = extract_github_repo_info("torvalds/linux")
+        assert result["owner"] == "torvalds"
+        assert result["repo"] == "linux"
+        assert result["url"] == "https://github.com/torvalds/linux"
+
+    def test_extract_github_repo_info_various_formats(self):
+        """Test various GitHub URL formats."""
+        # Without https://
+        result = extract_github_repo_info("github.com/microsoft/vscode")
+        assert result["owner"] == "microsoft"
+        assert result["repo"] == "vscode"
+
+        # With .git suffix
+        result = extract_github_repo_info("https://github.com/tensorflow/tensorflow.git")
+        assert result["owner"] == "tensorflow"
+        assert result["repo"] == "tensorflow"
+
+    def test_extract_github_repo_info_invalid(self):
+        """Test GitHub repo info extraction with invalid input."""
+        with pytest.raises(ValueError, match="Invalid GitHub URL"):
+            extract_github_repo_info("not-a-github-url")
+
+        with pytest.raises(ValueError, match="cannot be empty"):
+            extract_github_repo_info("")
+
+    def test_generate_link_card_basic(self):
+        """Test basic link card generation."""
+        reset_id_counter()
+        card = generate_link_card(
+            title="React Documentation",
+            url="https://react.dev/learn"
+        )
+
+        assert card.type == "a2ui.LinkCard"
+        assert card.props["title"] == "React Documentation"
+        assert card.props["url"] == "https://react.dev/learn"
+        assert card.props["domain"] == "react.dev"
+
+    def test_generate_link_card_with_all_fields(self):
+        """Test link card with all optional fields."""
+        reset_id_counter()
+        card = generate_link_card(
+            title="Introduction to Machine Learning",
+            url="https://example.com/ml-intro",
+            description="Comprehensive guide to ML fundamentals",
+            domain="example.com",
+            image_url="https://example.com/ml-preview.jpg",
+            tags=["machine-learning", "tutorial", "beginner"]
+        )
+
+        assert card.type == "a2ui.LinkCard"
+        assert card.props["title"] == "Introduction to Machine Learning"
+        assert card.props["url"] == "https://example.com/ml-intro"
+        assert card.props["description"] == "Comprehensive guide to ML fundamentals"
+        assert card.props["domain"] == "example.com"
+        assert card.props["imageUrl"] == "https://example.com/ml-preview.jpg"
+        assert card.props["tags"] == ["machine-learning", "tutorial", "beginner"]
+
+    def test_generate_link_card_auto_domain_extraction(self):
+        """Test automatic domain extraction in link cards."""
+        card = generate_link_card(
+            title="GitHub",
+            url="https://www.github.com/features"
+        )
+
+        assert card.props["domain"] == "github.com"  # www. removed
+
+    def test_generate_link_card_invalid_url(self):
+        """Test link card with invalid URL."""
+        with pytest.raises(ValueError, match="URL must start with http"):
+            generate_link_card(
+                title="Test",
+                url="example.com"
+            )
+
+    def test_generate_link_card_too_many_tags(self):
+        """Test link card with too many tags."""
+        with pytest.raises(ValueError, match="supports up to 5 tags"):
+            generate_link_card(
+                title="Test",
+                url="https://example.com",
+                tags=["tag1", "tag2", "tag3", "tag4", "tag5", "tag6"]
+            )
+
+    def test_generate_tool_card_basic(self):
+        """Test basic tool card generation."""
+        reset_id_counter()
+        card = generate_tool_card(
+            name="VS Code",
+            description="Free code editor from Microsoft",
+            url="https://code.visualstudio.com"
+        )
+
+        assert card.type == "a2ui.ToolCard"
+        assert card.props["name"] == "VS Code"
+        assert card.props["description"] == "Free code editor from Microsoft"
+        assert card.props["url"] == "https://code.visualstudio.com"
+
+    def test_generate_tool_card_with_all_fields(self):
+        """Test tool card with all optional fields."""
+        reset_id_counter()
+        card = generate_tool_card(
+            name="Figma",
+            description="Collaborative interface design tool",
+            url="https://www.figma.com",
+            category="design",
+            pricing="freemium",
+            icon_url="https://www.figma.com/favicon.ico",
+            features=["Real-time collaboration", "Prototyping", "Design systems"]
+        )
+
+        assert card.type == "a2ui.ToolCard"
+        assert card.props["name"] == "Figma"
+        assert card.props["description"] == "Collaborative interface design tool"
+        assert card.props["url"] == "https://www.figma.com"
+        assert card.props["category"] == "design"
+        assert card.props["pricing"] == "freemium"
+        assert card.props["iconUrl"] == "https://www.figma.com/favicon.ico"
+        assert card.props["features"] == ["Real-time collaboration", "Prototyping", "Design systems"]
+
+    def test_generate_tool_card_invalid_pricing(self):
+        """Test tool card with invalid pricing value."""
+        with pytest.raises(ValueError, match="Invalid pricing"):
+            generate_tool_card(
+                name="Test Tool",
+                description="Test",
+                url="https://example.com",
+                pricing="expensive"
+            )
+
+    def test_generate_tool_card_too_many_features(self):
+        """Test tool card with too many features."""
+        with pytest.raises(ValueError, match="supports up to 5 features"):
+            generate_tool_card(
+                name="Test Tool",
+                description="Test",
+                url="https://example.com",
+                features=["f1", "f2", "f3", "f4", "f5", "f6"]
+            )
+
+    def test_generate_book_card_basic(self):
+        """Test basic book card generation."""
+        reset_id_counter()
+        card = generate_book_card(
+            title="Clean Code",
+            author="Robert C. Martin"
+        )
+
+        assert card.type == "a2ui.BookCard"
+        assert card.props["title"] == "Clean Code"
+        assert card.props["author"] == "Robert C. Martin"
+
+    def test_generate_book_card_with_all_fields(self):
+        """Test book card with all optional fields."""
+        reset_id_counter()
+        card = generate_book_card(
+            title="The Pragmatic Programmer",
+            author="Andrew Hunt, David Thomas",
+            year=2019,
+            isbn="978-0-13-595705-9",
+            url="https://pragprog.com/titles/tpp20/",
+            cover_image_url="https://pragprog.com/titles/tpp20/tpp20.jpg",
+            rating=4.5,
+            description="Your journey to mastery"
+        )
+
+        assert card.type == "a2ui.BookCard"
+        assert card.props["title"] == "The Pragmatic Programmer"
+        assert card.props["author"] == "Andrew Hunt, David Thomas"
+        assert card.props["year"] == 2019
+        assert card.props["isbn"] == "978-0-13-595705-9"
+        assert card.props["url"] == "https://pragprog.com/titles/tpp20/"
+        assert card.props["coverImageUrl"] == "https://pragprog.com/titles/tpp20/tpp20.jpg"
+        assert card.props["rating"] == 4.5
+        assert card.props["description"] == "Your journey to mastery"
+
+    def test_generate_book_card_isbn_validation(self):
+        """Test ISBN validation in book cards."""
+        # Valid ISBN-10
+        card = generate_book_card(
+            title="Test Book",
+            author="Test Author",
+            isbn="0-13-595705-9"
+        )
+        assert card.props["isbn"] == "0-13-595705-9"
+
+        # Valid ISBN-13
+        card = generate_book_card(
+            title="Test Book",
+            author="Test Author",
+            isbn="9780135957059"
+        )
+        assert card.props["isbn"] == "9780135957059"
+
+        # Invalid ISBN (wrong length)
+        with pytest.raises(ValueError, match="Invalid ISBN format"):
+            generate_book_card(
+                title="Test Book",
+                author="Test Author",
+                isbn="12345"
+            )
+
+        # Invalid ISBN (non-digits)
+        with pytest.raises(ValueError, match="Invalid ISBN format"):
+            generate_book_card(
+                title="Test Book",
+                author="Test Author",
+                isbn="ABC-1234567890"
+            )
+
+    def test_generate_book_card_rating_validation(self):
+        """Test rating validation in book cards."""
+        # Valid rating
+        card = generate_book_card(
+            title="Test Book",
+            author="Test Author",
+            rating=4.5
+        )
+        assert card.props["rating"] == 4.5
+
+        # Rating too high
+        with pytest.raises(ValueError, match="Rating must be between 0 and 5"):
+            generate_book_card(
+                title="Test Book",
+                author="Test Author",
+                rating=6.0
+            )
+
+        # Negative rating
+        with pytest.raises(ValueError, match="Rating must be between 0 and 5"):
+            generate_book_card(
+                title="Test Book",
+                author="Test Author",
+                rating=-1.0
+            )
+
+    def test_generate_repo_card_from_url(self):
+        """Test repo card generation from GitHub URL."""
+        reset_id_counter()
+        card = generate_repo_card(
+            name="react",
+            repo_url="https://github.com/facebook/react"
+        )
+
+        assert card.type == "a2ui.RepoCard"
+        assert card.props["name"] == "react"
+        assert card.props["owner"] == "facebook"
+        assert card.props["repoUrl"] == "https://github.com/facebook/react"
+
+    def test_generate_repo_card_from_owner_name(self):
+        """Test repo card generation from owner and name."""
+        reset_id_counter()
+        card = generate_repo_card(
+            name="tensorflow",
+            owner="tensorflow"
+        )
+
+        assert card.type == "a2ui.RepoCard"
+        assert card.props["name"] == "tensorflow"
+        assert card.props["owner"] == "tensorflow"
+        assert card.props["repoUrl"] == "https://github.com/tensorflow/tensorflow"
+
+    def test_generate_repo_card_with_all_fields(self):
+        """Test repo card with all optional fields."""
+        reset_id_counter()
+        card = generate_repo_card(
+            name="vscode",
+            owner="microsoft",
+            description="Visual Studio Code",
+            language="TypeScript",
+            stars=150000,
+            fork_count=26000,
+            topics=["editor", "typescript", "electron"]
+        )
+
+        assert card.type == "a2ui.RepoCard"
+        assert card.props["name"] == "vscode"
+        assert card.props["owner"] == "microsoft"
+        assert card.props["description"] == "Visual Studio Code"
+        assert card.props["language"] == "TypeScript"
+        assert card.props["stars"] == 150000
+        assert card.props["forkCount"] == 26000
+        assert card.props["topics"] == ["editor", "typescript", "electron"]
+
+    def test_generate_repo_card_owner_repo_format(self):
+        """Test repo card with owner/repo format in URL."""
+        card = generate_repo_card(
+            name="linux",
+            repo_url="torvalds/linux"
+        )
+
+        assert card.props["owner"] == "torvalds"
+        assert card.props["repoUrl"] == "https://github.com/torvalds/linux"
+
+    def test_generate_repo_card_missing_required_info(self):
+        """Test repo card with missing required information."""
+        with pytest.raises(ValueError, match="requires either repo_url or both owner and name"):
+            generate_repo_card(name="test-repo")
+
+    def test_generate_repo_card_negative_stats(self):
+        """Test repo card with negative stats."""
+        with pytest.raises(ValueError, match="Star count cannot be negative"):
+            generate_repo_card(
+                name="test",
+                owner="test",
+                stars=-100
+            )
+
+        with pytest.raises(ValueError, match="Fork count cannot be negative"):
+            generate_repo_card(
+                name="test",
+                owner="test",
+                fork_count=-50
+            )
+
+    def test_generate_repo_card_too_many_topics(self):
+        """Test repo card with too many topics."""
+        with pytest.raises(ValueError, match="supports up to 5 topics"):
+            generate_repo_card(
+                name="test",
+                owner="test",
+                topics=["t1", "t2", "t3", "t4", "t5", "t6"]
+            )
+
+    def test_resource_integration_mixed_collection(self):
+        """Test integration: create a mixed resource collection."""
+        reset_id_counter()
+
+        # Create a collection of different resource types
+        resources = [
+            generate_link_card(
+                title="React Documentation",
+                url="https://react.dev",
+                description="Official React documentation",
+                tags=["react", "javascript", "docs"]
+            ),
+            generate_tool_card(
+                name="VS Code",
+                description="Code editor",
+                url="https://code.visualstudio.com",
+                category="ide",
+                pricing="free"
+            ),
+            generate_book_card(
+                title="Clean Code",
+                author="Robert C. Martin",
+                rating=4.5
+            ),
+            generate_repo_card(
+                name="react",
+                repo_url="https://github.com/facebook/react",
+                description="A JavaScript library for building user interfaces",
+                language="JavaScript",
+                stars=220000
+            ),
+        ]
+
+        # Verify all components created correctly
+        assert len(resources) == 4
+        assert resources[0].type == "a2ui.LinkCard"
+        assert resources[1].type == "a2ui.ToolCard"
+        assert resources[2].type == "a2ui.BookCard"
+        assert resources[3].type == "a2ui.RepoCard"
+
+        # Verify unique IDs
+        ids = [r.id for r in resources]
+        assert len(ids) == len(set(ids))  # All unique
+
+    def test_resource_json_serialization(self):
+        """Test JSON serialization of all resource components."""
+        reset_id_counter()
+
+        link = generate_link_card("Test Link", "https://example.com")
+        tool = generate_tool_card("Test Tool", "Description", "https://example.com")
+        book = generate_book_card("Test Book", "Test Author")
+        repo = generate_repo_card("test-repo", owner="test-owner")
+
+        # Serialize to JSON
+        link_json = json.loads(json.dumps(link.model_dump(exclude_none=True)))
+        tool_json = json.loads(json.dumps(tool.model_dump(exclude_none=True)))
+        book_json = json.loads(json.dumps(book.model_dump(exclude_none=True)))
+        repo_json = json.loads(json.dumps(repo.model_dump(exclude_none=True)))
+
+        # Verify types in JSON
+        assert link_json["type"] == "a2ui.LinkCard"
+        assert tool_json["type"] == "a2ui.ToolCard"
+        assert book_json["type"] == "a2ui.BookCard"
+        assert repo_json["type"] == "a2ui.RepoCard"
+
+    def test_resource_learning_path(self):
+        """Test integration: create a complete learning resource path."""
+        reset_id_counter()
+
+        learning_resources = {
+            "documentation": generate_link_card(
+                title="TypeScript Handbook",
+                url="https://www.typescriptlang.org/docs/",
+                description="Official TypeScript documentation",
+                tags=["typescript", "documentation", "reference"]
+            ),
+            "tutorial": generate_link_card(
+                title="TypeScript Deep Dive",
+                url="https://basarat.gitbook.io/typescript/",
+                description="Complete TypeScript guide",
+                tags=["typescript", "tutorial", "book"]
+            ),
+            "book": generate_book_card(
+                title="Programming TypeScript",
+                author="Boris Cherny",
+                year=2019,
+                rating=4.3,
+                description="Making Your JavaScript Applications Scale"
+            ),
+            "repository": generate_repo_card(
+                name="typescript",
+                owner="microsoft",
+                description="TypeScript is a superset of JavaScript",
+                language="TypeScript",
+                stars=95000,
+                topics=["typescript", "javascript", "compiler"]
+            ),
+            "tool": generate_tool_card(
+                name="TS Playground",
+                description="Online TypeScript compiler and sandbox",
+                url="https://www.typescriptlang.org/play",
+                category="ide",
+                pricing="free",
+                features=["Instant compilation", "Share code", "Type checking"]
+            ),
+        }
+
+        # Verify complete learning path
+        assert len(learning_resources) == 5
+        assert learning_resources["documentation"].props["title"] == "TypeScript Handbook"
+        assert learning_resources["book"].props["author"] == "Boris Cherny"
+        assert learning_resources["repository"].props["stars"] == 95000
+        assert learning_resources["tool"].props["pricing"] == "free"
+
+    def test_resource_tech_stack_collection(self):
+        """Test integration: create a tech stack resource collection."""
+        reset_id_counter()
+
+        tech_stack = [
+            # Frontend tools
+            generate_tool_card(
+                name="React",
+                description="JavaScript library for building UIs",
+                url="https://react.dev",
+                category="frontend",
+                pricing="free"
+            ),
+            generate_repo_card(
+                name="react",
+                owner="facebook",
+                language="JavaScript",
+                stars=220000
+            ),
+            # Backend tools
+            generate_tool_card(
+                name="Node.js",
+                description="JavaScript runtime",
+                url="https://nodejs.org",
+                category="backend",
+                pricing="free"
+            ),
+            generate_link_card(
+                title="Node.js Best Practices",
+                url="https://github.com/goldbergyoni/nodebestpractices",
+                description="Comprehensive guide to Node.js best practices",
+                tags=["nodejs", "best-practices", "guide"]
+            ),
+            # Learning resources
+            generate_book_card(
+                title="You Don't Know JS",
+                author="Kyle Simpson",
+                rating=4.7,
+                description="Book series on JavaScript"
+            ),
+        ]
+
+        # Verify tech stack
+        assert len(tech_stack) == 5
+        assert sum(1 for r in tech_stack if r.type == "a2ui.ToolCard") == 2
+        assert sum(1 for r in tech_stack if r.type == "a2ui.RepoCard") == 1
+        assert sum(1 for r in tech_stack if r.type == "a2ui.LinkCard") == 1
+        assert sum(1 for r in tech_stack if r.type == "a2ui.BookCard") == 1
+
+    def test_resource_batch_generation(self):
+        """Test batch generation of resource components."""
+        reset_id_counter()
+
+        # Create multiple resources in batch style
+        repos = [
+            generate_repo_card(name="react", owner="facebook", stars=220000),
+            generate_repo_card(name="vue", owner="vuejs", stars=205000),
+            generate_repo_card(name="angular", repo_url="angular/angular", stars=92000),
+        ]
+
+        books = [
+            generate_book_card("Clean Code", "Robert C. Martin", rating=4.5),
+            generate_book_card("The Pragmatic Programmer", "Hunt & Thomas", rating=4.4),
+            generate_book_card("Design Patterns", "Gang of Four", rating=4.6),
+        ]
+
+        # Verify batch creation
+        assert len(repos) == 3
+        assert len(books) == 3
+        assert all(r.type == "a2ui.RepoCard" for r in repos)
+        assert all(b.type == "a2ui.BookCard" for b in books)
+
+        # Verify stars are sorted
+        repo_stars = [r.props["stars"] for r in repos]
+        assert repo_stars == [220000, 205000, 92000]
