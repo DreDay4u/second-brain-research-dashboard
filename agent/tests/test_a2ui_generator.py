@@ -62,6 +62,12 @@ from a2ui_generator import (
     generate_key_takeaways,
     generate_executive_summary,
     generate_table_of_contents,
+    # Instructional generators
+    detect_language,
+    generate_step_card,
+    generate_code_block,
+    generate_callout_card,
+    generate_command_card,
     # Comparison generators
     generate_comparison_table,
     generate_vs_card,
@@ -5247,6 +5253,822 @@ class TestSummaryIntegration:
         assert level_1_count == 3  # 3 level 1 sections (overview, design, findings)
         assert level_2_count == 4  # 4 level 2 subsections (background, objectives, data, analysis)
         assert level_3_count == 3  # 3 level 3 subsections (history, modern, sampling)
+
+
+# =============================================================================
+# INSTRUCTIONAL COMPONENT TESTS
+# =============================================================================
+
+
+class TestDetectLanguage:
+    """Test suite for detect_language utility function."""
+
+    def test_detect_python_from_code(self):
+        """Test detecting Python from code patterns."""
+        code = "def hello():\n    print('Hello, world!')"
+        assert detect_language(code) == "python"
+
+    def test_detect_python_from_import(self):
+        """Test detecting Python from import statement."""
+        code = "import numpy as np\nfrom pandas import DataFrame"
+        assert detect_language(code) == "python"
+
+    def test_detect_javascript_from_code(self):
+        """Test detecting JavaScript from code patterns."""
+        code = "function hello() {\n    console.log('Hello!');\n}"
+        assert detect_language(code) == "javascript"
+
+    def test_detect_javascript_from_arrow_function(self):
+        """Test detecting JavaScript from arrow function."""
+        code = "const greet = (name) => {\n    return `Hello, ${name}`;\n}"
+        assert detect_language(code) == "javascript"
+
+    def test_detect_typescript_from_type_annotation(self):
+        """Test detecting TypeScript from type annotations."""
+        code = "function add(a: number, b: number): number {\n    return a + b;\n}"
+        assert detect_language(code) == "typescript"
+
+    def test_detect_java_from_code(self):
+        """Test detecting Java from code patterns."""
+        code = "public class HelloWorld {\n    public static void main(String[] args) {\n        System.out.println(\"Hello\");\n    }\n}"
+        assert detect_language(code) == "java"
+
+    def test_detect_cpp_from_include(self):
+        """Test detecting C++ from include statement."""
+        code = "#include <iostream>\nusing namespace std;"
+        assert detect_language(code) == "cpp"
+
+    def test_detect_go_from_code(self):
+        """Test detecting Go from code patterns."""
+        code = "package main\n\nfunc hello() {\n    fmt.Println(\"Hello\")\n}"
+        assert detect_language(code) == "go"
+
+    def test_detect_rust_from_code(self):
+        """Test detecting Rust from code patterns."""
+        code = "fn main() {\n    println!(\"Hello, world!\");\n}"
+        assert detect_language(code) == "rust"
+
+    def test_detect_sql_from_query(self):
+        """Test detecting SQL from query."""
+        code = "SELECT * FROM users WHERE active = 1"
+        assert detect_language(code) == "sql"
+
+    def test_detect_bash_from_shebang(self):
+        """Test detecting Bash from shebang."""
+        code = "#!/bin/bash\necho 'Hello'"
+        assert detect_language(code) == "bash"
+
+    def test_detect_html_from_tags(self):
+        """Test detecting HTML from tags."""
+        code = "<!DOCTYPE html>\n<html>\n<head><title>Test</title></head>\n</html>"
+        assert detect_language(code) == "html"
+
+    def test_detect_json_from_structure(self):
+        """Test detecting JSON from structure."""
+        code = '{\n  "name": "test",\n  "version": "1.0.0"\n}'
+        assert detect_language(code) == "json"
+
+    def test_detect_from_filename_python(self):
+        """Test detecting language from Python filename."""
+        code = "x = 10"
+        assert detect_language(code, "script.py") == "python"
+
+    def test_detect_from_filename_javascript(self):
+        """Test detecting language from JavaScript filename."""
+        code = "const x = 10;"
+        assert detect_language(code, "app.js") == "javascript"
+
+    def test_detect_from_filename_typescript(self):
+        """Test detecting language from TypeScript filename."""
+        code = "const x = 10;"
+        assert detect_language(code, "component.tsx") == "typescript"
+
+    def test_detect_from_filename_sql(self):
+        """Test detecting language from SQL filename."""
+        code = "SELECT 1"
+        assert detect_language(code, "query.sql") == "sql"
+
+    def test_detect_from_filename_markdown(self):
+        """Test detecting language from Markdown filename."""
+        code = "# Hello"
+        assert detect_language(code, "README.md") == "markdown"
+
+    def test_detect_unknown_defaults_to_text(self):
+        """Test unknown code defaults to text."""
+        code = "Some random text without clear patterns"
+        assert detect_language(code) == "text"
+
+    def test_detect_empty_code_defaults_to_text(self):
+        """Test empty code defaults to text."""
+        code = ""
+        assert detect_language(code) == "text"
+
+
+class TestStepCardGenerator:
+    """Test suite for generate_step_card function."""
+
+    def test_generate_basic_step_card(self):
+        """Test generating a basic step card."""
+        step = generate_step_card(
+            step_number=1,
+            title="Install Dependencies",
+            description="Run npm install to install packages"
+        )
+
+        assert step.type == "a2ui.StepCard"
+        assert step.props["stepNumber"] == 1
+        assert step.props["title"] == "Install Dependencies"
+        assert step.props["description"] == "Run npm install to install packages"
+        assert "details" not in step.props
+        assert "icon" not in step.props
+        assert "action" not in step.props
+
+    def test_generate_step_card_with_all_fields(self):
+        """Test generating step card with all optional fields."""
+        step = generate_step_card(
+            step_number=2,
+            title="Configure Environment",
+            description="Set up your environment variables",
+            details="Create a .env file in the project root with your API keys and configuration",
+            icon="settings",
+            action="View example .env file"
+        )
+
+        assert step.type == "a2ui.StepCard"
+        assert step.props["stepNumber"] == 2
+        assert step.props["title"] == "Configure Environment"
+        assert step.props["description"] == "Set up your environment variables"
+        assert step.props["details"] == "Create a .env file in the project root with your API keys and configuration"
+        assert step.props["icon"] == "settings"
+        assert step.props["action"] == "View example .env file"
+
+    def test_generate_step_card_strips_whitespace(self):
+        """Test that step card strips whitespace from strings."""
+        step = generate_step_card(
+            step_number=3,
+            title="  Build Project  ",
+            description="  Compile the source code  ",
+            details="  This may take a few minutes  ",
+            icon="  build  ",
+            action="  Learn more  "
+        )
+
+        assert step.props["title"] == "Build Project"
+        assert step.props["description"] == "Compile the source code"
+        assert step.props["details"] == "This may take a few minutes"
+        assert step.props["icon"] == "build"
+        assert step.props["action"] == "Learn more"
+
+    def test_generate_step_card_invalid_step_number_zero(self):
+        """Test that step_number cannot be zero."""
+        with pytest.raises(ValueError, match="step_number must be a positive integer"):
+            generate_step_card(
+                step_number=0,
+                title="Test",
+                description="Test"
+            )
+
+    def test_generate_step_card_invalid_step_number_negative(self):
+        """Test that step_number cannot be negative."""
+        with pytest.raises(ValueError, match="step_number must be a positive integer"):
+            generate_step_card(
+                step_number=-1,
+                title="Test",
+                description="Test"
+            )
+
+    def test_generate_step_card_invalid_step_number_non_integer(self):
+        """Test that step_number must be an integer."""
+        with pytest.raises(ValueError, match="step_number must be a positive integer"):
+            generate_step_card(
+                step_number=1.5,
+                title="Test",
+                description="Test"
+            )
+
+    def test_generate_step_card_too_large_step_number(self):
+        """Test that step_number cannot exceed 999."""
+        with pytest.raises(ValueError, match="step_number must be 999 or less"):
+            generate_step_card(
+                step_number=1000,
+                title="Test",
+                description="Test"
+            )
+
+    def test_generate_step_card_valid_high_step_number(self):
+        """Test that step_number 999 is valid."""
+        step = generate_step_card(
+            step_number=999,
+            title="Final Step",
+            description="Complete the tutorial"
+        )
+        assert step.props["stepNumber"] == 999
+
+    def test_generate_step_card_sequential_ids(self):
+        """Test that sequential step cards get unique IDs."""
+        reset_id_counter()
+        step1 = generate_step_card(1, "Step 1", "First step")
+        step2 = generate_step_card(2, "Step 2", "Second step")
+        step3 = generate_step_card(3, "Step 3", "Third step")
+
+        assert step1.id != step2.id
+        assert step2.id != step3.id
+        assert step1.id != step3.id
+
+
+class TestCodeBlockGenerator:
+    """Test suite for generate_code_block function."""
+
+    def test_generate_basic_code_block(self):
+        """Test generating a basic code block."""
+        code = generate_code_block(
+            code="print('Hello, world!')"
+        )
+
+        assert code.type == "a2ui.CodeBlock"
+        assert code.props["code"] == "print('Hello, world!')"
+        assert code.props["language"] == "python"  # Auto-detected
+        assert code.props["copyButton"] is True
+        assert "filename" not in code.props
+        assert "highlightLines" not in code.props
+
+    def test_generate_code_block_with_explicit_language(self):
+        """Test generating code block with explicit language."""
+        code = generate_code_block(
+            code="const x = 10;",
+            language="javascript"
+        )
+
+        assert code.props["language"] == "javascript"
+
+    def test_generate_code_block_with_filename(self):
+        """Test generating code block with filename."""
+        code = generate_code_block(
+            code="SELECT * FROM users",
+            filename="query.sql"
+        )
+
+        assert code.props["filename"] == "query.sql"
+        assert code.props["language"] == "sql"  # Detected from filename
+
+    def test_generate_code_block_with_highlight_lines(self):
+        """Test generating code block with highlighted lines."""
+        code_text = "line 1\nline 2\nline 3\nline 4\nline 5"
+        code = generate_code_block(
+            code=code_text,
+            language="text",
+            highlight_lines=[2, 4]
+        )
+
+        assert code.props["highlightLines"] == [2, 4]
+
+    def test_generate_code_block_highlight_lines_sorted(self):
+        """Test that highlight lines are sorted."""
+        code_text = "line 1\nline 2\nline 3\nline 4\nline 5"
+        code = generate_code_block(
+            code=code_text,
+            language="text",
+            highlight_lines=[4, 1, 3]
+        )
+
+        assert code.props["highlightLines"] == [1, 3, 4]
+
+    def test_generate_code_block_without_copy_button(self):
+        """Test generating code block without copy button."""
+        code = generate_code_block(
+            code="test",
+            language="text",
+            copy_button=False
+        )
+
+        assert code.props["copyButton"] is False
+
+    def test_generate_code_block_all_features(self):
+        """Test generating code block with all features."""
+        code = generate_code_block(
+            code="def add(a, b):\n    return a + b\n\nresult = add(5, 3)",
+            language="python",
+            filename="calculator.py",
+            highlight_lines=[2],
+            copy_button=True
+        )
+
+        assert code.props["code"] == "def add(a, b):\n    return a + b\n\nresult = add(5, 3)"
+        assert code.props["language"] == "python"
+        assert code.props["filename"] == "calculator.py"
+        assert code.props["highlightLines"] == [2]
+        assert code.props["copyButton"] is True
+
+    def test_generate_code_block_strips_whitespace(self):
+        """Test that code block strips surrounding whitespace."""
+        code = generate_code_block(
+            code="  \n  test  \n  ",
+            language="text"
+        )
+
+        assert code.props["code"] == "test"
+
+    def test_generate_code_block_empty_code_error(self):
+        """Test that empty code raises error."""
+        with pytest.raises(ValueError, match="code cannot be empty"):
+            generate_code_block(code="")
+
+    def test_generate_code_block_whitespace_only_error(self):
+        """Test that whitespace-only code raises error."""
+        with pytest.raises(ValueError, match="code cannot be empty"):
+            generate_code_block(code="   \n   ")
+
+    def test_generate_code_block_invalid_highlight_line_too_high(self):
+        """Test that invalid highlight line number raises error."""
+        code_text = "line 1\nline 2\nline 3"
+        with pytest.raises(ValueError, match="Invalid line number 5 in highlight_lines"):
+            generate_code_block(
+                code=code_text,
+                language="text",
+                highlight_lines=[5]
+            )
+
+    def test_generate_code_block_invalid_highlight_line_zero(self):
+        """Test that zero highlight line raises error."""
+        code_text = "line 1\nline 2\nline 3"
+        with pytest.raises(ValueError, match="Invalid line number 0 in highlight_lines"):
+            generate_code_block(
+                code=code_text,
+                language="text",
+                highlight_lines=[0]
+            )
+
+    def test_generate_code_block_invalid_highlight_line_negative(self):
+        """Test that negative highlight line raises error."""
+        code_text = "line 1\nline 2\nline 3"
+        with pytest.raises(ValueError, match="Invalid line number -1 in highlight_lines"):
+            generate_code_block(
+                code=code_text,
+                language="text",
+                highlight_lines=[-1]
+            )
+
+    def test_generate_code_block_auto_detect_python(self):
+        """Test auto-detection of Python code."""
+        code = generate_code_block(
+            code="def hello():\n    print('Hello')"
+        )
+        assert code.props["language"] == "python"
+
+    def test_generate_code_block_auto_detect_javascript(self):
+        """Test auto-detection of JavaScript code."""
+        code = generate_code_block(
+            code="function hello() {\n    console.log('Hello');\n}"
+        )
+        assert code.props["language"] == "javascript"
+
+    def test_generate_code_block_auto_detect_from_filename(self):
+        """Test auto-detection from filename when language not specified."""
+        code = generate_code_block(
+            code="test content",
+            filename="script.rb"
+        )
+        assert code.props["language"] == "ruby"
+
+
+class TestCalloutCardGenerator:
+    """Test suite for generate_callout_card function."""
+
+    def test_generate_info_callout(self):
+        """Test generating info callout."""
+        callout = generate_callout_card(
+            type="info",
+            title="Getting Started",
+            content="Follow the steps below to set up your project"
+        )
+
+        assert callout.type == "a2ui.CalloutCard"
+        assert callout.props["type"] == "info"
+        assert callout.props["title"] == "Getting Started"
+        assert callout.props["content"] == "Follow the steps below to set up your project"
+        assert "icon" not in callout.props
+
+    def test_generate_warning_callout(self):
+        """Test generating warning callout."""
+        callout = generate_callout_card(
+            type="warning",
+            title="Breaking Change",
+            content="This version introduces breaking changes to the API"
+        )
+
+        assert callout.props["type"] == "warning"
+        assert callout.props["title"] == "Breaking Change"
+
+    def test_generate_success_callout(self):
+        """Test generating success callout."""
+        callout = generate_callout_card(
+            type="success",
+            title="Completed",
+            content="Your project has been successfully deployed"
+        )
+
+        assert callout.props["type"] == "success"
+
+    def test_generate_error_callout(self):
+        """Test generating error callout."""
+        callout = generate_callout_card(
+            type="error",
+            title="Build Failed",
+            content="The build process encountered errors"
+        )
+
+        assert callout.props["type"] == "error"
+
+    def test_generate_tip_callout(self):
+        """Test generating tip callout."""
+        callout = generate_callout_card(
+            type="tip",
+            title="Pro Tip",
+            content="Use keyboard shortcuts to speed up your workflow"
+        )
+
+        assert callout.props["type"] == "tip"
+
+    def test_generate_note_callout(self):
+        """Test generating note callout."""
+        callout = generate_callout_card(
+            type="note",
+            title="Important",
+            content="Remember to save your changes before exiting"
+        )
+
+        assert callout.props["type"] == "note"
+
+    def test_generate_callout_with_custom_icon(self):
+        """Test generating callout with custom icon."""
+        callout = generate_callout_card(
+            type="info",
+            title="Documentation",
+            content="Read the docs for more information",
+            icon="book"
+        )
+
+        assert callout.props["icon"] == "book"
+
+    def test_generate_callout_strips_whitespace(self):
+        """Test that callout strips whitespace."""
+        callout = generate_callout_card(
+            type="info",
+            title="  Test Title  ",
+            content="  Test Content  ",
+            icon="  test-icon  "
+        )
+
+        assert callout.props["title"] == "Test Title"
+        assert callout.props["content"] == "Test Content"
+        assert callout.props["icon"] == "test-icon"
+
+    def test_generate_callout_invalid_type(self):
+        """Test that invalid type raises error."""
+        with pytest.raises(ValueError, match="Invalid type: invalid"):
+            generate_callout_card(
+                type="invalid",
+                title="Test",
+                content="Test"
+            )
+
+    def test_generate_callout_all_valid_types(self):
+        """Test all valid callout types."""
+        valid_types = ["info", "warning", "success", "error", "tip", "note"]
+
+        for callout_type in valid_types:
+            callout = generate_callout_card(
+                type=callout_type,
+                title=f"{callout_type.title()} Title",
+                content=f"{callout_type.title()} content"
+            )
+            assert callout.props["type"] == callout_type
+
+
+class TestCommandCardGenerator:
+    """Test suite for generate_command_card function."""
+
+    def test_generate_basic_command(self):
+        """Test generating a basic command card."""
+        cmd = generate_command_card(
+            command="npm install"
+        )
+
+        assert cmd.type == "a2ui.CommandCard"
+        assert cmd.props["command"] == "npm install"
+        assert cmd.props["copyButton"] is True
+        assert "description" not in cmd.props
+        assert "output" not in cmd.props
+        assert "platform" not in cmd.props
+
+    def test_generate_command_with_description(self):
+        """Test generating command with description."""
+        cmd = generate_command_card(
+            command="git clone https://github.com/user/repo.git",
+            description="Clone the repository to your local machine"
+        )
+
+        assert cmd.props["description"] == "Clone the repository to your local machine"
+
+    def test_generate_command_with_output(self):
+        """Test generating command with expected output."""
+        cmd = generate_command_card(
+            command="npm --version",
+            output="9.8.1"
+        )
+
+        assert cmd.props["output"] == "9.8.1"
+
+    def test_generate_command_with_platform_bash(self):
+        """Test generating command with bash platform."""
+        cmd = generate_command_card(
+            command="ls -la",
+            platform="bash"
+        )
+
+        assert cmd.props["platform"] == "bash"
+
+    def test_generate_command_with_platform_powershell(self):
+        """Test generating command with PowerShell platform."""
+        cmd = generate_command_card(
+            command="Get-Process",
+            platform="powershell"
+        )
+
+        assert cmd.props["platform"] == "powershell"
+
+    def test_generate_command_all_features(self):
+        """Test generating command with all features."""
+        cmd = generate_command_card(
+            command="docker build -t myapp:latest .",
+            description="Build Docker image",
+            output="Successfully built abc123\nSuccessfully tagged myapp:latest",
+            platform="bash",
+            copy_button=True
+        )
+
+        assert cmd.props["command"] == "docker build -t myapp:latest ."
+        assert cmd.props["description"] == "Build Docker image"
+        assert cmd.props["output"] == "Successfully built abc123\nSuccessfully tagged myapp:latest"
+        assert cmd.props["platform"] == "bash"
+        assert cmd.props["copyButton"] is True
+
+    def test_generate_command_without_copy_button(self):
+        """Test generating command without copy button."""
+        cmd = generate_command_card(
+            command="echo test",
+            copy_button=False
+        )
+
+        assert cmd.props["copyButton"] is False
+
+    def test_generate_command_strips_whitespace(self):
+        """Test that command card strips whitespace."""
+        cmd = generate_command_card(
+            command="  npm install  ",
+            description="  Install packages  ",
+            output="  Success  "
+        )
+
+        assert cmd.props["command"] == "npm install"
+        assert cmd.props["description"] == "Install packages"
+        assert cmd.props["output"] == "Success"
+
+    def test_generate_command_empty_command_error(self):
+        """Test that empty command raises error."""
+        with pytest.raises(ValueError, match="command cannot be empty"):
+            generate_command_card(command="")
+
+    def test_generate_command_whitespace_only_error(self):
+        """Test that whitespace-only command raises error."""
+        with pytest.raises(ValueError, match="command cannot be empty"):
+            generate_command_card(command="   ")
+
+    def test_generate_command_invalid_platform(self):
+        """Test that invalid platform raises error."""
+        with pytest.raises(ValueError, match="Invalid platform: invalid"):
+            generate_command_card(
+                command="test",
+                platform="invalid"
+            )
+
+    def test_generate_command_all_valid_platforms(self):
+        """Test all valid platform types."""
+        valid_platforms = ["bash", "zsh", "powershell", "cmd", "terminal"]
+
+        for platform in valid_platforms:
+            cmd = generate_command_card(
+                command=f"test-{platform}",
+                platform=platform
+            )
+            assert cmd.props["platform"] == platform
+
+
+class TestInstructionalIntegration:
+    """Integration tests for instructional component generators."""
+
+    def test_instructional_integration_complete_tutorial(self):
+        """Test complete tutorial workflow with all instructional components."""
+        reset_id_counter()
+
+        # Tutorial introduction callout
+        intro = generate_callout_card(
+            type="info",
+            title="Welcome to the Tutorial",
+            content="This tutorial will guide you through setting up a new project from scratch."
+        )
+
+        # Step 1: Clone repository
+        step1 = generate_step_card(
+            step_number=1,
+            title="Clone the Repository",
+            description="Get the starter code from GitHub",
+            details="This will download the project template to your local machine",
+            icon="download"
+        )
+
+        # Command for step 1
+        cmd1 = generate_command_card(
+            command="git clone https://github.com/example/starter.git",
+            description="Clone the starter repository",
+            platform="bash"
+        )
+
+        # Step 2: Install dependencies
+        step2 = generate_step_card(
+            step_number=2,
+            title="Install Dependencies",
+            description="Install all required packages",
+            icon="package"
+        )
+
+        cmd2 = generate_command_card(
+            command="npm install",
+            description="Install Node.js packages",
+            output="added 245 packages in 12s",
+            platform="bash"
+        )
+
+        # Step 3: Configure environment
+        step3 = generate_step_card(
+            step_number=3,
+            title="Configure Environment",
+            description="Set up environment variables",
+            details="Create a .env file with your API keys",
+            action="View .env example"
+        )
+
+        # Code example for .env file
+        env_code = generate_code_block(
+            code="API_KEY=your_api_key_here\nDATABASE_URL=postgresql://localhost:5432/mydb\nPORT=3000",
+            filename=".env",
+            highlight_lines=[1]
+        )
+
+        # Warning callout
+        warning = generate_callout_card(
+            type="warning",
+            title="Security Warning",
+            content="Never commit your .env file to version control. Add it to .gitignore."
+        )
+
+        # Step 4: Run the app
+        step4 = generate_step_card(
+            step_number=4,
+            title="Start Development Server",
+            description="Run the application locally",
+            icon="play"
+        )
+
+        cmd4 = generate_command_card(
+            command="npm run dev",
+            description="Start the development server",
+            output="Server running on http://localhost:3000",
+            platform="bash"
+        )
+
+        # Success callout
+        success = generate_callout_card(
+            type="success",
+            title="Tutorial Complete!",
+            content="Your development environment is now set up and ready to use."
+        )
+
+        # Verify all components
+        assert intro.type == "a2ui.CalloutCard"
+        assert intro.props["type"] == "info"
+
+        assert step1.type == "a2ui.StepCard"
+        assert step1.props["stepNumber"] == 1
+
+        assert cmd1.type == "a2ui.CommandCard"
+        assert "git clone" in cmd1.props["command"]
+
+        assert step2.props["stepNumber"] == 2
+        assert cmd2.props["command"] == "npm install"
+
+        assert step3.props["stepNumber"] == 3
+        assert env_code.type == "a2ui.CodeBlock"
+        assert env_code.props["filename"] == ".env"
+
+        assert warning.props["type"] == "warning"
+
+        assert step4.props["stepNumber"] == 4
+        assert cmd4.props["command"] == "npm run dev"
+
+        assert success.props["type"] == "success"
+
+        # Verify unique IDs
+        all_ids = [intro.id, step1.id, cmd1.id, step2.id, cmd2.id,
+                   step3.id, env_code.id, warning.id, step4.id, cmd4.id, success.id]
+        assert len(all_ids) == len(set(all_ids))
+
+    def test_instructional_integration_code_tutorial(self):
+        """Test tutorial with multiple code examples in different languages."""
+        reset_id_counter()
+
+        # Python example
+        python_code = generate_code_block(
+            code="def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)",
+            language="python",
+            filename="factorial.py",
+            highlight_lines=[3]
+        )
+
+        # JavaScript example
+        js_code = generate_code_block(
+            code="const factorial = (n) => {\n    return n <= 1 ? 1 : n * factorial(n - 1);\n};",
+            language="javascript",
+            filename="factorial.js"
+        )
+
+        # SQL example
+        sql_code = generate_code_block(
+            code="SELECT \n    user_id,\n    COUNT(*) as order_count\nFROM orders\nWHERE status = 'completed'\nGROUP BY user_id\nHAVING COUNT(*) > 5;",
+            filename="top_customers.sql",
+            highlight_lines=[5, 6, 7]
+        )
+
+        # Verify languages
+        assert python_code.props["language"] == "python"
+        assert js_code.props["language"] == "javascript"
+        assert sql_code.props["language"] == "sql"
+
+        # Verify filenames
+        assert python_code.props["filename"] == "factorial.py"
+        assert js_code.props["filename"] == "factorial.js"
+        assert sql_code.props["filename"] == "top_customers.sql"
+
+        # Verify highlighting
+        assert python_code.props["highlightLines"] == [3]
+        assert sql_code.props["highlightLines"] == [5, 6, 7]
+
+    def test_instructional_integration_troubleshooting_guide(self):
+        """Test troubleshooting guide with callouts and commands."""
+        reset_id_counter()
+
+        # Common error
+        error_callout = generate_callout_card(
+            type="error",
+            title="Module Not Found Error",
+            content="If you see 'ModuleNotFoundError', it means a required package is missing."
+        )
+
+        # Solution
+        solution_callout = generate_callout_card(
+            type="tip",
+            title="Solution",
+            content="Install the missing package using pip or npm."
+        )
+
+        # Install command
+        install_cmd = generate_command_card(
+            command="pip install package-name",
+            description="Install Python package",
+            platform="bash"
+        )
+
+        # Verify command
+        verify_cmd = generate_command_card(
+            command="python -c \"import package_name; print('Success!')\"",
+            description="Verify installation",
+            output="Success!",
+            platform="bash"
+        )
+
+        # Success note
+        success_note = generate_callout_card(
+            type="success",
+            title="Fixed!",
+            content="The package is now installed and ready to use."
+        )
+
+        # Verify workflow
+        assert error_callout.props["type"] == "error"
+        assert solution_callout.props["type"] == "tip"
+        assert install_cmd.props["command"] == "pip install package-name"
+        assert verify_cmd.props["output"] == "Success!"
+        assert success_note.props["type"] == "success"
 
 
 class TestComparisonTableGenerator:

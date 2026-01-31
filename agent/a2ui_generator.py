@@ -3133,6 +3133,448 @@ def generate_table_of_contents(
     return generate_component("a2ui.TableOfContents", props)
 
 
+# =============================================================================
+# INSTRUCTIONAL COMPONENT GENERATORS
+# =============================================================================
+
+
+def detect_language(code: str, filename: str = None) -> str:
+    """
+    Detect programming language from code content or filename.
+
+    Analyzes code patterns and syntax to determine the programming language.
+    Uses filename extension as a hint when provided.
+
+    Args:
+        code: The code content to analyze
+        filename: Optional filename to extract extension hint
+
+    Returns:
+        Language identifier (python, javascript, java, etc.) or "text" if unknown
+
+    Examples:
+        >>> detect_language("def hello():\\n    print('hi')")
+        'python'
+
+        >>> detect_language("function hello() { console.log('hi'); }")
+        'javascript'
+
+        >>> detect_language("SELECT * FROM users", "query.sql")
+        'sql'
+    """
+    code = code.strip()
+
+    # Try filename extension first
+    if filename:
+        ext = filename.split('.')[-1].lower()
+        extension_map = {
+            'py': 'python',
+            'js': 'javascript',
+            'jsx': 'javascript',
+            'ts': 'typescript',
+            'tsx': 'typescript',
+            'java': 'java',
+            'cpp': 'cpp',
+            'c': 'c',
+            'cs': 'csharp',
+            'go': 'go',
+            'rs': 'rust',
+            'rb': 'ruby',
+            'php': 'php',
+            'swift': 'swift',
+            'kt': 'kotlin',
+            'scala': 'scala',
+            'r': 'r',
+            'sql': 'sql',
+            'sh': 'bash',
+            'bash': 'bash',
+            'zsh': 'zsh',
+            'ps1': 'powershell',
+            'html': 'html',
+            'css': 'css',
+            'scss': 'scss',
+            'json': 'json',
+            'xml': 'xml',
+            'yaml': 'yaml',
+            'yml': 'yaml',
+            'md': 'markdown',
+            'tex': 'latex',
+        }
+        if ext in extension_map:
+            return extension_map[ext]
+
+    # Pattern-based detection
+    patterns = [
+        # Python
+        (r'^\s*(def|class|import|from .* import|if __name__|async def)', 'python'),
+        (r'print\s*\(|\.append\(|\.extend\(', 'python'),
+
+        # TypeScript (check before JavaScript since TS is superset of JS)
+        (r':\s*(string|number|boolean|any)\s*[;=)]', 'typescript'),
+
+        # JavaScript
+        (r'^\s*(function|const|let|var|import |export |=>)', 'javascript'),
+        (r'console\.log|\.map\(|\.filter\(|\.reduce\(', 'javascript'),
+
+        # Java
+        (r'^\s*(public|private|protected)\s+(class|interface|static|void)', 'java'),
+        (r'System\.out\.println|\.toString\(\)|new \w+\(', 'java'),
+
+        # C/C++
+        (r'^\s*#include\s*<|^\s*#define\s+', 'cpp'),
+        (r'std::|cout\s*<<|cin\s*>>', 'cpp'),
+        (r'printf\s*\(|scanf\s*\(|malloc\s*\(', 'c'),
+
+        # Go
+        (r'^\s*func\s+\w+\s*\(|package\s+\w+', 'go'),
+        (r'fmt\.Print|:=\s*', 'go'),
+
+        # Rust
+        (r'^\s*fn\s+\w+|let\s+mut\s+', 'rust'),
+        (r'println!\(|impl\s+\w+', 'rust'),
+
+        # Ruby
+        (r'^\s*def\s+\w+|^\s*class\s+\w+|^\s*module\s+', 'ruby'),
+        (r'puts\s+|end\s*$|@\w+\s*=', 'ruby'),
+
+        # PHP
+        (r'<\?php|^\s*\$\w+\s*=', 'php'),
+
+        # SQL
+        (r'^\s*(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s+', 'sql'),
+
+        # Shell/Bash
+        (r'^\s*#!/bin/(bash|sh)|^\s*export\s+\w+=', 'bash'),
+
+        # HTML
+        (r'^\s*<!DOCTYPE html>|<html|<head|<body|<div', 'html'),
+
+        # CSS
+        (r'^\s*[\w\-\.#]+\s*\{|\s*(margin|padding|color|background):', 'css'),
+
+        # JSON
+        (r'^\s*\{[\s\n]*"[\w\-]+":', 'json'),
+
+        # YAML
+        (r'^\w+:\s*$|^\s+-\s+\w+:', 'yaml'),
+
+        # Markdown
+        (r'^#+\s+\w+|^\*\*\w+|^\[.*\]\(.*\)', 'markdown'),
+    ]
+
+    for pattern, language in patterns:
+        if re.search(pattern, code, re.MULTILINE | re.IGNORECASE):
+            return language
+
+    return 'text'
+
+
+def generate_step_card(
+    step_number: int,
+    title: str,
+    description: str,
+    details: str = None,
+    icon: str = None,
+    action: str = None
+) -> A2UIComponent:
+    """
+    Generate a StepCard A2UI component for tutorial/guide steps.
+
+    Creates a step card component for displaying sequential instructions
+    in tutorials, guides, or step-by-step workflows. Each card represents
+    a single step with a number, title, and description.
+
+    Args:
+        step_number: Step number (1-999, must be positive)
+        title: Step title/heading
+        description: Brief step description or instruction
+        details: Optional longer explanation or additional context
+        icon: Optional icon name for visual representation
+        action: Optional call-to-action text (e.g., "Try it now", "Learn more")
+
+    Returns:
+        A2UIComponent configured as StepCard
+
+    Raises:
+        ValueError: If step_number is not positive
+
+    Examples:
+        >>> # Basic step card
+        >>> step = generate_step_card(
+        ...     step_number=1,
+        ...     title="Install Dependencies",
+        ...     description="Run npm install to install all required packages"
+        ... )
+
+        >>> # Step card with all features
+        >>> step = generate_step_card(
+        ...     step_number=2,
+        ...     title="Configure Environment",
+        ...     description="Set up your environment variables",
+        ...     details="Create a .env file in the project root with your API keys",
+        ...     icon="settings",
+        ...     action="View example .env file"
+        ... )
+    """
+    # Validate step_number
+    if not isinstance(step_number, int) or step_number <= 0:
+        raise ValueError(f"step_number must be a positive integer, got: {step_number}")
+
+    if step_number > 999:
+        raise ValueError(f"step_number must be 999 or less, got: {step_number}")
+
+    props = {
+        "stepNumber": step_number,
+        "title": title.strip(),
+        "description": description.strip(),
+    }
+
+    # Add optional fields
+    if details:
+        props["details"] = details.strip()
+
+    if icon:
+        props["icon"] = icon.strip()
+
+    if action:
+        props["action"] = action.strip()
+
+    return generate_component("a2ui.StepCard", props)
+
+
+def generate_code_block(
+    code: str,
+    language: str = None,
+    filename: str = None,
+    highlight_lines: list[int] = None,
+    copy_button: bool = True
+) -> A2UIComponent:
+    """
+    Generate a CodeBlock A2UI component for displaying code snippets.
+
+    Creates a code block component with syntax highlighting, optional line
+    highlighting, and copy functionality. Automatically detects language
+    if not specified.
+
+    Args:
+        code: Code content to display
+        language: Programming language (auto-detected if None)
+        filename: Optional filename to display and help with language detection
+        highlight_lines: Optional list of line numbers to highlight (1-indexed)
+        copy_button: Whether to show copy button (default: True)
+
+    Returns:
+        A2UIComponent configured as CodeBlock
+
+    Raises:
+        ValueError: If code is empty
+        ValueError: If highlight_lines contains invalid line numbers
+
+    Examples:
+        >>> # Basic code block (auto-detect language)
+        >>> code = generate_code_block(
+        ...     code="def hello():\\n    print('Hello, world!')"
+        ... )
+
+        >>> # Code block with all features
+        >>> code = generate_code_block(
+        ...     code="const x = 10;\\nconst y = 20;\\nconst sum = x + y;",
+        ...     language="javascript",
+        ...     filename="sum.js",
+        ...     highlight_lines=[3],
+        ...     copy_button=True
+        ... )
+
+        >>> # Code block from file
+        >>> code = generate_code_block(
+        ...     code="SELECT * FROM users WHERE active = 1",
+        ...     filename="query.sql"
+        ... )
+    """
+    # Validate code
+    if not code or not code.strip():
+        raise ValueError("code cannot be empty")
+
+    code = code.strip()
+
+    # Auto-detect language if not provided
+    if language is None:
+        language = detect_language(code, filename)
+
+    # Validate highlight_lines if provided
+    if highlight_lines:
+        code_lines = code.split('\n')
+        num_lines = len(code_lines)
+        for line_num in highlight_lines:
+            if not isinstance(line_num, int) or line_num < 1 or line_num > num_lines:
+                raise ValueError(
+                    f"Invalid line number {line_num} in highlight_lines. "
+                    f"Must be between 1 and {num_lines}"
+                )
+
+    props = {
+        "code": code,
+        "language": language,
+        "copyButton": copy_button,
+    }
+
+    # Add optional fields
+    if filename:
+        props["filename"] = filename.strip()
+
+    if highlight_lines:
+        props["highlightLines"] = sorted(highlight_lines)
+
+    return generate_component("a2ui.CodeBlock", props)
+
+
+def generate_callout_card(
+    type: str,
+    title: str,
+    content: str,
+    icon: str = None
+) -> A2UIComponent:
+    """
+    Generate a CalloutCard A2UI component for highlighted information.
+
+    Creates a callout card component for displaying important information,
+    tips, warnings, or notes with visual differentiation by type.
+
+    Args:
+        type: Callout type - "info", "warning", "success", "error", "tip", or "note"
+        title: Callout title/heading
+        content: Callout content/message
+        icon: Optional custom icon name (defaults based on type)
+
+    Returns:
+        A2UIComponent configured as CalloutCard
+
+    Raises:
+        ValueError: If type is not valid
+
+    Examples:
+        >>> # Info callout
+        >>> callout = generate_callout_card(
+        ...     type="info",
+        ...     title="Getting Started",
+        ...     content="Follow the steps below to set up your project"
+        ... )
+
+        >>> # Warning callout with custom icon
+        >>> callout = generate_callout_card(
+        ...     type="warning",
+        ...     title="Breaking Change",
+        ...     content="This version introduces breaking changes to the API",
+        ...     icon="alert-triangle"
+        ... )
+
+        >>> # Success tip
+        >>> callout = generate_callout_card(
+        ...     type="tip",
+        ...     title="Pro Tip",
+        ...     content="Use keyboard shortcuts to speed up your workflow"
+        ... )
+    """
+    # Validate type
+    valid_types = {"info", "warning", "success", "error", "tip", "note"}
+    if type not in valid_types:
+        raise ValueError(
+            f"Invalid type: {type}. Must be one of: {', '.join(valid_types)}"
+        )
+
+    props = {
+        "type": type,
+        "title": title.strip(),
+        "content": content.strip(),
+    }
+
+    # Add optional icon
+    if icon:
+        props["icon"] = icon.strip()
+
+    return generate_component("a2ui.CalloutCard", props)
+
+
+def generate_command_card(
+    command: str,
+    description: str = None,
+    output: str = None,
+    platform: str = None,
+    copy_button: bool = True
+) -> A2UIComponent:
+    """
+    Generate a CommandCard A2UI component for CLI commands.
+
+    Creates a command card component for displaying terminal/shell commands
+    with optional description, expected output, and platform-specific styling.
+
+    Args:
+        command: The command text (required)
+        description: Optional description of what the command does
+        output: Optional expected output from the command
+        platform: Optional platform identifier - "bash", "zsh", "powershell", "cmd", or "terminal"
+        copy_button: Whether to show copy button (default: True)
+
+    Returns:
+        A2UIComponent configured as CommandCard
+
+    Raises:
+        ValueError: If command is empty
+        ValueError: If platform is not valid
+
+    Examples:
+        >>> # Basic command
+        >>> cmd = generate_command_card(
+        ...     command="npm install"
+        ... )
+
+        >>> # Command with all features
+        >>> cmd = generate_command_card(
+        ...     command="git clone https://github.com/user/repo.git",
+        ...     description="Clone the repository to your local machine",
+        ...     output="Cloning into 'repo'...\\nDone.",
+        ...     platform="bash",
+        ...     copy_button=True
+        ... )
+
+        >>> # PowerShell command
+        >>> cmd = generate_command_card(
+        ...     command="Get-Process | Where-Object {$_.CPU -gt 100}",
+        ...     description="Find processes using high CPU",
+        ...     platform="powershell"
+        ... )
+    """
+    # Validate command
+    if not command or not command.strip():
+        raise ValueError("command cannot be empty")
+
+    # Validate platform if provided
+    if platform:
+        valid_platforms = {"bash", "zsh", "powershell", "cmd", "terminal"}
+        if platform not in valid_platforms:
+            raise ValueError(
+                f"Invalid platform: {platform}. "
+                f"Must be one of: {', '.join(valid_platforms)}"
+            )
+
+    props = {
+        "command": command.strip(),
+        "copyButton": copy_button,
+    }
+
+    # Add optional fields
+    if description:
+        props["description"] = description.strip()
+
+    if output:
+        props["output"] = output.strip()
+
+    if platform:
+        props["platform"] = platform
+
+    return generate_component("a2ui.CommandCard", props)
+
+
 def generate_comparison_table(
     headers: list[str],
     rows: list[dict[str, any]],
@@ -3573,6 +4015,12 @@ __all__ = [
     "generate_key_takeaways",
     "generate_executive_summary",
     "generate_table_of_contents",
+    # Instructional generators
+    "detect_language",
+    "generate_step_card",
+    "generate_code_block",
+    "generate_callout_card",
+    "generate_command_card",
     # Comparison generators
     "generate_comparison_table",
     "generate_vs_card",
