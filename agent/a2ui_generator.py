@@ -2804,6 +2804,335 @@ def generate_expert_tip(
     return generate_component("a2ui.ExpertTip", props)
 
 
+# =============================================================================
+# SUMMARY & OVERVIEW COMPONENT GENERATORS
+# =============================================================================
+
+
+def generate_tldr(
+    content: str,
+    max_length: int = 200
+) -> A2UIComponent:
+    """
+    Generate a TLDR (Too Long; Didn't Read) A2UI component for quick summaries.
+
+    Creates a concise summary component for highlighting key information at a glance.
+    Ideal for summarizing articles, research papers, or long-form content.
+
+    Args:
+        content: Short summary text (max 300 characters)
+        max_length: Optional maximum character length for display (default 200)
+
+    Returns:
+        A2UIComponent configured as TLDR
+
+    Raises:
+        ValueError: If content is empty
+        ValueError: If content exceeds 300 characters
+        ValueError: If max_length is not positive
+
+    Examples:
+        >>> # Basic TLDR
+        >>> tldr = generate_tldr(
+        ...     "AI market expected to reach $196B by 2030, driven by enterprise adoption."
+        ... )
+
+        >>> # TLDR with custom max length
+        >>> tldr = generate_tldr(
+        ...     "Study shows 73% of organizations plan to adopt AI within 2 years.",
+        ...     max_length=150
+        ... )
+    """
+    # Validate content
+    if not content or not content.strip():
+        raise ValueError("TLDR content cannot be empty")
+
+    content_stripped = content.strip()
+    if len(content_stripped) > 300:
+        raise ValueError(
+            f"TLDR content must be 300 characters or less, got {len(content_stripped)} characters"
+        )
+
+    # Validate max_length
+    if max_length <= 0:
+        raise ValueError(f"max_length must be positive, got {max_length}")
+
+    props = {
+        "content": content_stripped,
+        "maxLength": max_length,
+    }
+
+    return generate_component("a2ui.TLDR", props)
+
+
+def generate_key_takeaways(
+    items: list[str],
+    category: str | None = None,
+    icon: str | None = None
+) -> A2UIComponent:
+    """
+    Generate a KeyTakeaways A2UI component for highlighting main points.
+
+    Creates a component for displaying key points, insights, learnings, conclusions,
+    or recommendations from content. Supports categorization and custom icons.
+
+    Args:
+        items: List of 1-10 key points/takeaways
+        category: Optional category type - "insights", "learnings", "conclusions", "recommendations"
+        icon: Optional icon name for the takeaways
+
+    Returns:
+        A2UIComponent configured as KeyTakeaways
+
+    Raises:
+        ValueError: If items list is empty or has more than 10 items
+        ValueError: If any item is empty
+        ValueError: If category is not valid
+
+    Examples:
+        >>> # Basic key takeaways
+        >>> takeaways = generate_key_takeaways([
+        ...     "AI adoption increasing across industries",
+        ...     "Cloud infrastructure is critical for AI deployment",
+        ...     "Data quality remains biggest challenge"
+        ... ])
+
+        >>> # Categorized takeaways with icon
+        >>> takeaways = generate_key_takeaways(
+        ...     items=[
+        ...         "Focus on user experience first",
+        ...         "Iterate based on feedback",
+        ...         "Measure everything"
+        ...     ],
+        ...     category="insights",
+        ...     icon="lightbulb"
+        ... )
+    """
+    # Validate items count
+    if not items:
+        raise ValueError("KeyTakeaways must have at least 1 item")
+
+    if len(items) > 10:
+        raise ValueError(
+            f"KeyTakeaways can have at most 10 items, got {len(items)} items"
+        )
+
+    # Validate each item
+    for i, item in enumerate(items):
+        if not item or not item.strip():
+            raise ValueError(f"KeyTakeaways item {i} cannot be empty")
+
+    # Validate category if provided
+    if category:
+        valid_categories = {"insights", "learnings", "conclusions", "recommendations"}
+        if category not in valid_categories:
+            raise ValueError(
+                f"Invalid category: {category}. "
+                f"Must be one of: {', '.join(sorted(valid_categories))}"
+            )
+
+    props = {
+        "items": [item.strip() for item in items],
+    }
+
+    # Add optional fields
+    if category:
+        props["category"] = category
+
+    if icon:
+        props["icon"] = icon
+
+    return generate_component("a2ui.KeyTakeaways", props)
+
+
+def generate_executive_summary(
+    title: str,
+    summary: str,
+    key_metrics: dict[str, str] | None = None,
+    recommendations: list[str] | None = None
+) -> A2UIComponent:
+    """
+    Generate an ExecutiveSummary A2UI component for detailed business summaries.
+
+    Creates a comprehensive summary component for business reports, research papers,
+    or complex content requiring detailed overview with metrics and recommendations.
+
+    Args:
+        title: Summary title/heading
+        summary: Detailed summary text (50-2000 characters)
+        key_metrics: Optional dict of metric name to value pairs
+        recommendations: Optional list of 1-5 recommended actions
+
+    Returns:
+        A2UIComponent configured as ExecutiveSummary
+
+    Raises:
+        ValueError: If title or summary is empty
+        ValueError: If summary is not between 50-2000 characters
+        ValueError: If recommendations list has more than 5 items
+
+    Examples:
+        >>> # Basic executive summary
+        >>> summary = generate_executive_summary(
+        ...     title="Q4 2024 AI Market Analysis",
+        ...     summary="The AI market showed significant growth in Q4 2024..."
+        ... )
+
+        >>> # Full executive summary with metrics and recommendations
+        >>> summary = generate_executive_summary(
+        ...     title="Annual AI Adoption Report",
+        ...     summary="Enterprise AI adoption reached record levels in 2024, "
+        ...             "with 73% of Fortune 500 companies implementing AI solutions...",
+        ...     key_metrics={
+        ...         "Market Size": "$196B",
+        ...         "Growth Rate": "+23%",
+        ...         "Adoption Rate": "73%"
+        ...     },
+        ...     recommendations=[
+        ...         "Invest in AI infrastructure",
+        ...         "Prioritize data quality",
+        ...         "Build internal AI expertise"
+        ...     ]
+        ... )
+    """
+    # Validate title
+    if not title or not title.strip():
+        raise ValueError("ExecutiveSummary title cannot be empty")
+
+    # Validate summary
+    if not summary or not summary.strip():
+        raise ValueError("ExecutiveSummary summary cannot be empty")
+
+    summary_stripped = summary.strip()
+    if len(summary_stripped) < 50:
+        raise ValueError(
+            f"ExecutiveSummary summary must be at least 50 characters, got {len(summary_stripped)} characters"
+        )
+
+    if len(summary_stripped) > 2000:
+        raise ValueError(
+            f"ExecutiveSummary summary must be 2000 characters or less, got {len(summary_stripped)} characters"
+        )
+
+    # Validate recommendations if provided
+    if recommendations is not None:
+        if len(recommendations) > 5:
+            raise ValueError(
+                f"ExecutiveSummary can have at most 5 recommendations, got {len(recommendations)} recommendations"
+            )
+
+        for i, rec in enumerate(recommendations):
+            if not rec or not rec.strip():
+                raise ValueError(f"ExecutiveSummary recommendation {i} cannot be empty")
+
+    props = {
+        "title": title.strip(),
+        "summary": summary_stripped,
+    }
+
+    # Add optional fields
+    if key_metrics:
+        props["keyMetrics"] = key_metrics
+
+    if recommendations:
+        props["recommendations"] = [rec.strip() for rec in recommendations]
+
+    return generate_component("a2ui.ExecutiveSummary", props)
+
+
+def generate_table_of_contents(
+    items: list[dict[str, str]],
+    include_page_numbers: bool = False
+) -> A2UIComponent:
+    """
+    Generate a TableOfContents A2UI component for navigating long documents.
+
+    Creates a hierarchical table of contents for navigating sections in long documents,
+    articles, or reports. Supports nested heading levels and anchor linking.
+
+    Args:
+        items: List of 1-50 section entries with 'title', optional 'anchor', and optional 'level' (0-3)
+        include_page_numbers: Whether to show page numbers (default False for web, True for PDFs)
+
+    Returns:
+        A2UIComponent configured as TableOfContents
+
+    Raises:
+        ValueError: If items list is empty or has more than 50 items
+        ValueError: If any item is missing required 'title' field
+        ValueError: If level is not in range 0-3
+
+    Examples:
+        >>> # Basic table of contents
+        >>> toc = generate_table_of_contents([
+        ...     {"title": "Introduction", "anchor": "intro"},
+        ...     {"title": "Methodology", "anchor": "methods"},
+        ...     {"title": "Results", "anchor": "results"},
+        ...     {"title": "Conclusion", "anchor": "conclusion"}
+        ... ])
+
+        >>> # Hierarchical table of contents with levels
+        >>> toc = generate_table_of_contents(
+        ...     items=[
+        ...         {"title": "Introduction", "anchor": "intro", "level": 0},
+        ...         {"title": "Background", "anchor": "background", "level": 1},
+        ...         {"title": "Historical Context", "anchor": "history", "level": 2},
+        ...         {"title": "Current State", "anchor": "current", "level": 2},
+        ...         {"title": "Methodology", "anchor": "methods", "level": 0},
+        ...         {"title": "Data Collection", "anchor": "data", "level": 1},
+        ...         {"title": "Analysis Approach", "anchor": "analysis", "level": 1}
+        ...     ],
+        ...     include_page_numbers=False
+        ... )
+    """
+    # Validate items count
+    if not items:
+        raise ValueError("TableOfContents must have at least 1 item")
+
+    if len(items) > 50:
+        raise ValueError(
+            f"TableOfContents can have at most 50 items, got {len(items)} items"
+        )
+
+    # Validate each item
+    validated_items = []
+    for i, item in enumerate(items):
+        if not isinstance(item, dict):
+            raise ValueError(f"TableOfContents item {i} must be a dictionary")
+
+        if "title" not in item:
+            raise ValueError(f"TableOfContents item {i} must have 'title' field")
+
+        if not item["title"] or not item["title"].strip():
+            raise ValueError(f"TableOfContents item {i} title cannot be empty")
+
+        # Validate level if provided
+        if "level" in item:
+            level = item["level"]
+            if not isinstance(level, int) or level < 0 or level > 3:
+                raise ValueError(
+                    f"TableOfContents item {i} level must be 0-3, got {level}"
+                )
+
+        validated_item = {"title": item["title"].strip()}
+
+        # Add optional anchor
+        if "anchor" in item and item["anchor"]:
+            validated_item["anchor"] = item["anchor"]
+
+        # Add optional level (default to 0)
+        validated_item["level"] = item.get("level", 0)
+
+        validated_items.append(validated_item)
+
+    props = {
+        "items": validated_items,
+        "includePageNumbers": include_page_numbers,
+    }
+
+    return generate_component("a2ui.TableOfContents", props)
+
+
 # Export public API
 __all__ = [
     "A2UIComponent",
@@ -2849,4 +3178,9 @@ __all__ = [
     "generate_company_card",
     "generate_quote_card",
     "generate_expert_tip",
+    # Summary generators
+    "generate_tldr",
+    "generate_key_takeaways",
+    "generate_executive_summary",
+    "generate_table_of_contents",
 ]

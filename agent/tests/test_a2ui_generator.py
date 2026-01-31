@@ -57,6 +57,11 @@ from a2ui_generator import (
     generate_company_card,
     generate_quote_card,
     generate_expert_tip,
+    # Summary generators
+    generate_tldr,
+    generate_key_takeaways,
+    generate_executive_summary,
+    generate_table_of_contents,
 )
 
 
@@ -4585,3 +4590,655 @@ class TestPeopleComponentGenerators:
             "profile-card-1", "profile-card-2", "profile-card-3",
             "profile-card-4", "profile-card-5"
         ]
+
+
+# =============================================================================
+# SUMMARY COMPONENT GENERATOR TESTS
+# =============================================================================
+
+
+class TestTLDRGenerator:
+    """Test suite for generate_tldr() function."""
+
+    def test_basic_tldr(self):
+        """Test basic TLDR generation."""
+        reset_id_counter()
+
+        tldr = generate_tldr("AI market expected to reach $196B by 2030.")
+
+        assert tldr.type == "a2ui.TLDR"
+        assert tldr.id == "t-l-d-r-1"
+        assert tldr.props["content"] == "AI market expected to reach $196B by 2030."
+        assert tldr.props["maxLength"] == 200
+
+    def test_tldr_with_custom_max_length(self):
+        """Test TLDR with custom max length."""
+        reset_id_counter()
+
+        tldr = generate_tldr(
+            "Study shows 73% of organizations plan to adopt AI.",
+            max_length=150
+        )
+
+        assert tldr.props["maxLength"] == 150
+        assert tldr.props["content"] == "Study shows 73% of organizations plan to adopt AI."
+
+    def test_tldr_strips_whitespace(self):
+        """Test that TLDR strips leading/trailing whitespace."""
+        reset_id_counter()
+
+        tldr = generate_tldr("   Content with spaces   ")
+
+        assert tldr.props["content"] == "Content with spaces"
+
+    def test_tldr_empty_content_error(self):
+        """Test that empty content raises error."""
+        with pytest.raises(ValueError, match="TLDR content cannot be empty"):
+            generate_tldr("")
+
+        with pytest.raises(ValueError, match="TLDR content cannot be empty"):
+            generate_tldr("   ")
+
+    def test_tldr_content_too_long_error(self):
+        """Test that content over 300 characters raises error."""
+        long_content = "A" * 301
+
+        with pytest.raises(ValueError, match="TLDR content must be 300 characters or less"):
+            generate_tldr(long_content)
+
+    def test_tldr_max_length_validation(self):
+        """Test that invalid max_length raises error."""
+        with pytest.raises(ValueError, match="max_length must be positive"):
+            generate_tldr("Valid content", max_length=0)
+
+        with pytest.raises(ValueError, match="max_length must be positive"):
+            generate_tldr("Valid content", max_length=-1)
+
+    def test_tldr_at_character_limit(self):
+        """Test TLDR at exactly 300 characters."""
+        content_300 = "A" * 300
+
+        tldr = generate_tldr(content_300)
+
+        assert len(tldr.props["content"]) == 300
+
+
+class TestKeyTakeawaysGenerator:
+    """Test suite for generate_key_takeaways() function."""
+
+    def test_basic_key_takeaways(self):
+        """Test basic key takeaways generation."""
+        reset_id_counter()
+
+        items = [
+            "AI adoption increasing across industries",
+            "Cloud infrastructure is critical",
+            "Data quality remains biggest challenge"
+        ]
+
+        takeaways = generate_key_takeaways(items)
+
+        assert takeaways.type == "a2ui.KeyTakeaways"
+        assert takeaways.id == "key-takeaways-1"
+        assert takeaways.props["items"] == items
+        assert "category" not in takeaways.props
+        assert "icon" not in takeaways.props
+
+    def test_key_takeaways_with_category(self):
+        """Test key takeaways with category."""
+        reset_id_counter()
+
+        items = ["Focus on user experience", "Iterate based on feedback"]
+
+        takeaways = generate_key_takeaways(items, category="insights")
+
+        assert takeaways.props["category"] == "insights"
+
+    def test_key_takeaways_with_icon(self):
+        """Test key takeaways with icon."""
+        reset_id_counter()
+
+        items = ["Measure everything", "Data-driven decisions"]
+
+        takeaways = generate_key_takeaways(items, icon="lightbulb")
+
+        assert takeaways.props["icon"] == "lightbulb"
+
+    def test_key_takeaways_all_categories(self):
+        """Test all valid categories."""
+        valid_categories = ["insights", "learnings", "conclusions", "recommendations"]
+
+        for category in valid_categories:
+            reset_id_counter()
+            takeaways = generate_key_takeaways(["Item 1"], category=category)
+            assert takeaways.props["category"] == category
+
+    def test_key_takeaways_strips_whitespace(self):
+        """Test that items have whitespace stripped."""
+        reset_id_counter()
+
+        items = ["  Item 1  ", "  Item 2  "]
+
+        takeaways = generate_key_takeaways(items)
+
+        assert takeaways.props["items"] == ["Item 1", "Item 2"]
+
+    def test_key_takeaways_empty_list_error(self):
+        """Test that empty items list raises error."""
+        with pytest.raises(ValueError, match="KeyTakeaways must have at least 1 item"):
+            generate_key_takeaways([])
+
+    def test_key_takeaways_too_many_items_error(self):
+        """Test that more than 10 items raises error."""
+        items = [f"Item {i}" for i in range(11)]
+
+        with pytest.raises(ValueError, match="KeyTakeaways can have at most 10 items"):
+            generate_key_takeaways(items)
+
+    def test_key_takeaways_empty_item_error(self):
+        """Test that empty item raises error."""
+        with pytest.raises(ValueError, match="KeyTakeaways item 1 cannot be empty"):
+            generate_key_takeaways(["Item 1", "", "Item 3"])
+
+        with pytest.raises(ValueError, match="KeyTakeaways item 0 cannot be empty"):
+            generate_key_takeaways(["   "])
+
+    def test_key_takeaways_invalid_category_error(self):
+        """Test that invalid category raises error."""
+        with pytest.raises(ValueError, match="Invalid category"):
+            generate_key_takeaways(["Item 1"], category="invalid")
+
+    def test_key_takeaways_at_limits(self):
+        """Test key takeaways at exactly 10 items."""
+        items = [f"Item {i}" for i in range(1, 11)]
+
+        takeaways = generate_key_takeaways(items)
+
+        assert len(takeaways.props["items"]) == 10
+
+
+class TestExecutiveSummaryGenerator:
+    """Test suite for generate_executive_summary() function."""
+
+    def test_basic_executive_summary(self):
+        """Test basic executive summary generation."""
+        reset_id_counter()
+
+        summary = generate_executive_summary(
+            title="Q4 2024 AI Market Analysis",
+            summary="The AI market showed significant growth in Q4 2024, with enterprise adoption reaching new heights. " * 2
+        )
+
+        assert summary.type == "a2ui.ExecutiveSummary"
+        assert summary.id == "executive-summary-1"
+        assert summary.props["title"] == "Q4 2024 AI Market Analysis"
+        assert "summary" in summary.props
+        assert "keyMetrics" not in summary.props
+        assert "recommendations" not in summary.props
+
+    def test_executive_summary_with_metrics(self):
+        """Test executive summary with key metrics."""
+        reset_id_counter()
+
+        metrics = {
+            "Market Size": "$196B",
+            "Growth Rate": "+23%",
+            "Adoption Rate": "73%"
+        }
+
+        summary = generate_executive_summary(
+            title="Annual AI Adoption Report",
+            summary="Enterprise AI adoption reached record levels in 2024, with significant growth across all sectors. " * 3,
+            key_metrics=metrics
+        )
+
+        assert summary.props["keyMetrics"] == metrics
+
+    def test_executive_summary_with_recommendations(self):
+        """Test executive summary with recommendations."""
+        reset_id_counter()
+
+        recommendations = [
+            "Invest in AI infrastructure",
+            "Prioritize data quality",
+            "Build internal AI expertise"
+        ]
+
+        summary = generate_executive_summary(
+            title="AI Strategy Report",
+            summary="Organizations need to take immediate action to capitalize on AI opportunities. " * 5,
+            recommendations=recommendations
+        )
+
+        assert summary.props["recommendations"] == recommendations
+
+    def test_executive_summary_full_features(self):
+        """Test executive summary with all features."""
+        reset_id_counter()
+
+        summary = generate_executive_summary(
+            title="Comprehensive AI Analysis",
+            summary="A detailed analysis of AI market trends, opportunities, and strategic recommendations for 2025. " * 4,
+            key_metrics={"Revenue": "$500M", "Growth": "+45%"},
+            recommendations=["Action 1", "Action 2"]
+        )
+
+        assert summary.props["title"] == "Comprehensive AI Analysis"
+        assert "summary" in summary.props
+        assert "keyMetrics" in summary.props
+        assert "recommendations" in summary.props
+
+    def test_executive_summary_strips_whitespace(self):
+        """Test that fields have whitespace stripped."""
+        reset_id_counter()
+
+        summary = generate_executive_summary(
+            title="  Title with spaces  ",
+            summary="  " + ("Summary with spaces. " * 10),
+            recommendations=["  Rec 1  ", "  Rec 2  "]
+        )
+
+        assert summary.props["title"] == "Title with spaces"
+        assert summary.props["summary"].startswith("Summary with spaces.")
+        assert summary.props["recommendations"] == ["Rec 1", "Rec 2"]
+
+    def test_executive_summary_empty_title_error(self):
+        """Test that empty title raises error."""
+        with pytest.raises(ValueError, match="ExecutiveSummary title cannot be empty"):
+            generate_executive_summary("", "Valid summary text. " * 10)
+
+        with pytest.raises(ValueError, match="ExecutiveSummary title cannot be empty"):
+            generate_executive_summary("   ", "Valid summary text. " * 10)
+
+    def test_executive_summary_empty_summary_error(self):
+        """Test that empty summary raises error."""
+        with pytest.raises(ValueError, match="ExecutiveSummary summary cannot be empty"):
+            generate_executive_summary("Valid title", "")
+
+        with pytest.raises(ValueError, match="ExecutiveSummary summary cannot be empty"):
+            generate_executive_summary("Valid title", "   ")
+
+    def test_executive_summary_too_short_error(self):
+        """Test that summary under 50 characters raises error."""
+        with pytest.raises(ValueError, match="ExecutiveSummary summary must be at least 50 characters"):
+            generate_executive_summary("Title", "Too short")
+
+    def test_executive_summary_too_long_error(self):
+        """Test that summary over 2000 characters raises error."""
+        long_summary = "A" * 2001
+
+        with pytest.raises(ValueError, match="ExecutiveSummary summary must be 2000 characters or less"):
+            generate_executive_summary("Title", long_summary)
+
+    def test_executive_summary_too_many_recommendations_error(self):
+        """Test that more than 5 recommendations raises error."""
+        recommendations = [f"Rec {i}" for i in range(6)]
+
+        with pytest.raises(ValueError, match="ExecutiveSummary can have at most 5 recommendations"):
+            generate_executive_summary(
+                "Title",
+                "Valid summary text. " * 20,
+                recommendations=recommendations
+            )
+
+    def test_executive_summary_empty_recommendation_error(self):
+        """Test that empty recommendation raises error."""
+        with pytest.raises(ValueError, match="ExecutiveSummary recommendation 1 cannot be empty"):
+            generate_executive_summary(
+                "Title",
+                "Valid summary text. " * 20,
+                recommendations=["Rec 1", "", "Rec 3"]
+            )
+
+    def test_executive_summary_at_character_limits(self):
+        """Test executive summary at exact character limits."""
+        # Test minimum (50 characters)
+        summary_50 = "A" * 50
+        result = generate_executive_summary("Title", summary_50)
+        assert len(result.props["summary"]) == 50
+
+        # Test maximum (2000 characters)
+        summary_2000 = "A" * 2000
+        result = generate_executive_summary("Title", summary_2000)
+        assert len(result.props["summary"]) == 2000
+
+
+class TestTableOfContentsGenerator:
+    """Test suite for generate_table_of_contents() function."""
+
+    def test_basic_table_of_contents(self):
+        """Test basic table of contents generation."""
+        reset_id_counter()
+
+        items = [
+            {"title": "Introduction", "anchor": "intro"},
+            {"title": "Methodology", "anchor": "methods"},
+            {"title": "Results", "anchor": "results"}
+        ]
+
+        toc = generate_table_of_contents(items)
+
+        assert toc.type == "a2ui.TableOfContents"
+        assert toc.id == "table-of-contents-1"
+        assert len(toc.props["items"]) == 3
+        assert toc.props["includePageNumbers"] is False
+
+    def test_table_of_contents_with_page_numbers(self):
+        """Test table of contents with page numbers."""
+        reset_id_counter()
+
+        items = [{"title": "Chapter 1"}]
+
+        toc = generate_table_of_contents(items, include_page_numbers=True)
+
+        assert toc.props["includePageNumbers"] is True
+
+    def test_table_of_contents_with_levels(self):
+        """Test table of contents with hierarchical levels."""
+        reset_id_counter()
+
+        items = [
+            {"title": "Introduction", "anchor": "intro", "level": 0},
+            {"title": "Background", "anchor": "background", "level": 1},
+            {"title": "History", "anchor": "history", "level": 2},
+            {"title": "Current State", "anchor": "current", "level": 2},
+            {"title": "Methodology", "anchor": "methods", "level": 0}
+        ]
+
+        toc = generate_table_of_contents(items)
+
+        assert toc.props["items"][0]["level"] == 0
+        assert toc.props["items"][1]["level"] == 1
+        assert toc.props["items"][2]["level"] == 2
+        assert toc.props["items"][3]["level"] == 2
+        assert toc.props["items"][4]["level"] == 0
+
+    def test_table_of_contents_default_level(self):
+        """Test that missing level defaults to 0."""
+        reset_id_counter()
+
+        items = [{"title": "Section 1"}]
+
+        toc = generate_table_of_contents(items)
+
+        assert toc.props["items"][0]["level"] == 0
+
+    def test_table_of_contents_without_anchors(self):
+        """Test table of contents without anchor links."""
+        reset_id_counter()
+
+        items = [
+            {"title": "Chapter 1"},
+            {"title": "Chapter 2"}
+        ]
+
+        toc = generate_table_of_contents(items)
+
+        assert "anchor" not in toc.props["items"][0]
+        assert "anchor" not in toc.props["items"][1]
+
+    def test_table_of_contents_strips_whitespace(self):
+        """Test that titles have whitespace stripped."""
+        reset_id_counter()
+
+        items = [{"title": "  Section 1  "}]
+
+        toc = generate_table_of_contents(items)
+
+        assert toc.props["items"][0]["title"] == "Section 1"
+
+    def test_table_of_contents_empty_list_error(self):
+        """Test that empty items list raises error."""
+        with pytest.raises(ValueError, match="TableOfContents must have at least 1 item"):
+            generate_table_of_contents([])
+
+    def test_table_of_contents_too_many_items_error(self):
+        """Test that more than 50 items raises error."""
+        items = [{"title": f"Section {i}"} for i in range(51)]
+
+        with pytest.raises(ValueError, match="TableOfContents can have at most 50 items"):
+            generate_table_of_contents(items)
+
+    def test_table_of_contents_invalid_item_type_error(self):
+        """Test that non-dict items raise error."""
+        with pytest.raises(ValueError, match="TableOfContents item 0 must be a dictionary"):
+            generate_table_of_contents(["string item"])
+
+    def test_table_of_contents_missing_title_error(self):
+        """Test that items without title raise error."""
+        with pytest.raises(ValueError, match="TableOfContents item 0 must have 'title' field"):
+            generate_table_of_contents([{"anchor": "intro"}])
+
+    def test_table_of_contents_empty_title_error(self):
+        """Test that empty title raises error."""
+        with pytest.raises(ValueError, match="TableOfContents item 0 title cannot be empty"):
+            generate_table_of_contents([{"title": ""}])
+
+        with pytest.raises(ValueError, match="TableOfContents item 0 title cannot be empty"):
+            generate_table_of_contents([{"title": "   "}])
+
+    def test_table_of_contents_invalid_level_error(self):
+        """Test that invalid level raises error."""
+        with pytest.raises(ValueError, match="TableOfContents item 0 level must be 0-3"):
+            generate_table_of_contents([{"title": "Section", "level": 4}])
+
+        with pytest.raises(ValueError, match="TableOfContents item 0 level must be 0-3"):
+            generate_table_of_contents([{"title": "Section", "level": -1}])
+
+    def test_table_of_contents_at_limits(self):
+        """Test table of contents at exactly 50 items."""
+        items = [{"title": f"Section {i}"} for i in range(1, 51)]
+
+        toc = generate_table_of_contents(items)
+
+        assert len(toc.props["items"]) == 50
+
+    def test_table_of_contents_all_levels(self):
+        """Test all valid level values (0-3)."""
+        items = [
+            {"title": "Level 0", "level": 0},
+            {"title": "Level 1", "level": 1},
+            {"title": "Level 2", "level": 2},
+            {"title": "Level 3", "level": 3}
+        ]
+
+        toc = generate_table_of_contents(items)
+
+        for i, item in enumerate(toc.props["items"]):
+            assert item["level"] == i
+
+
+class TestSummaryIntegration:
+    """Integration tests for summary component generators."""
+
+    def test_summary_integration_complete_workflow(self):
+        """Test complete workflow with all summary components."""
+        reset_id_counter()
+
+        # Generate TLDR
+        tldr = generate_tldr(
+            "AI market expected to reach $196B by 2030, driven by enterprise adoption and cloud infrastructure."
+        )
+
+        # Generate key takeaways
+        takeaways = generate_key_takeaways(
+            items=[
+                "AI adoption increasing across industries",
+                "Cloud infrastructure critical for deployment",
+                "Data quality remains biggest challenge"
+            ],
+            category="insights"
+        )
+
+        # Generate executive summary
+        exec_summary = generate_executive_summary(
+            title="Annual AI Market Report 2024",
+            summary="The AI market showed unprecedented growth in 2024, with enterprise adoption reaching 73% among Fortune 500 companies. Cloud infrastructure investments enabled rapid AI deployment, while data quality emerged as the primary challenge. Organizations invested heavily in building internal AI expertise and governance frameworks.",
+            key_metrics={
+                "Market Size": "$196B",
+                "Growth Rate": "+23%",
+                "Adoption Rate": "73%"
+            },
+            recommendations=[
+                "Invest in AI infrastructure",
+                "Prioritize data quality initiatives",
+                "Build internal AI expertise"
+            ]
+        )
+
+        # Generate table of contents
+        toc = generate_table_of_contents([
+            {"title": "Executive Summary", "anchor": "exec-summary", "level": 0},
+            {"title": "Market Overview", "anchor": "market", "level": 0},
+            {"title": "Market Size", "anchor": "size", "level": 1},
+            {"title": "Growth Trends", "anchor": "trends", "level": 1},
+            {"title": "Enterprise Adoption", "anchor": "enterprise", "level": 0},
+            {"title": "Challenges", "anchor": "challenges", "level": 0},
+            {"title": "Recommendations", "anchor": "recommendations", "level": 0}
+        ])
+
+        # Verify all components created
+        components = [tldr, takeaways, exec_summary, toc]
+        assert len(components) == 4
+
+        # Verify types
+        assert components[0].type == "a2ui.TLDR"
+        assert components[1].type == "a2ui.KeyTakeaways"
+        assert components[2].type == "a2ui.ExecutiveSummary"
+        assert components[3].type == "a2ui.TableOfContents"
+
+        # Verify IDs are sequential
+        assert components[0].id == "t-l-d-r-1"
+        assert components[1].id == "key-takeaways-2"
+        assert components[2].id == "executive-summary-3"
+        assert components[3].id == "table-of-contents-4"
+
+    def test_summary_integration_long_form_article(self):
+        """Test summary components for long-form article."""
+        reset_id_counter()
+
+        # TLDR for quick overview
+        tldr = generate_tldr(
+            "Research reveals how transformer models revolutionized NLP through self-attention mechanisms."
+        )
+
+        # Key takeaways from research
+        takeaways = generate_key_takeaways(
+            items=[
+                "Self-attention enables parallel processing",
+                "Transformers outperform RNNs on most tasks",
+                "Pre-training on large corpora is crucial",
+                "Fine-tuning adapts models to specific tasks"
+            ],
+            category="learnings"
+        )
+
+        # Executive summary of research
+        summary = generate_executive_summary(
+            title="Transformer Architecture Analysis",
+            summary="This comprehensive analysis examines how transformer architecture transformed natural language processing. The self-attention mechanism enables parallel processing of sequences, overcoming limitations of recurrent neural networks. Pre-training on massive text corpora followed by task-specific fine-tuning has become the dominant paradigm, achieving state-of-the-art results across benchmarks.",
+            key_metrics={
+                "Performance Gain": "+15%",
+                "Training Speed": "3x faster",
+                "Parameter Count": "175B"
+            }
+        )
+
+        # TOC for navigation
+        toc = generate_table_of_contents([
+            {"title": "Introduction", "anchor": "intro", "level": 0},
+            {"title": "Background", "anchor": "background", "level": 1},
+            {"title": "Architecture", "anchor": "arch", "level": 0},
+            {"title": "Self-Attention", "anchor": "attention", "level": 1},
+            {"title": "Multi-Head Attention", "anchor": "multi-head", "level": 2},
+            {"title": "Results", "anchor": "results", "level": 0},
+            {"title": "Conclusion", "anchor": "conclusion", "level": 0}
+        ])
+
+        # Verify structure
+        assert tldr.props["content"].startswith("Research reveals")
+        assert len(takeaways.props["items"]) == 4
+        assert takeaways.props["category"] == "learnings"
+        assert summary.props["title"] == "Transformer Architecture Analysis"
+        assert len(toc.props["items"]) == 7
+
+    def test_summary_integration_batch_generation(self):
+        """Test batch generation of summary components."""
+        reset_id_counter()
+
+        # Generate multiple TLDRs
+        tldrs = [
+            generate_tldr(f"Summary {i}: Key findings from research study {i}")
+            for i in range(1, 4)
+        ]
+
+        # Generate multiple key takeaways
+        takeaways_list = [
+            generate_key_takeaways([f"Point {i}.{j}" for j in range(1, 4)])
+            for i in range(1, 3)
+        ]
+
+        # Verify batch creation
+        assert len(tldrs) == 3
+        assert len(takeaways_list) == 2
+        assert all(t.type == "a2ui.TLDR" for t in tldrs)
+        assert all(k.type == "a2ui.KeyTakeaways" for k in takeaways_list)
+
+    def test_summary_integration_mixed_categories(self):
+        """Test key takeaways with different categories."""
+        reset_id_counter()
+
+        categories = ["insights", "learnings", "conclusions", "recommendations"]
+
+        takeaways_by_category = []
+        for category in categories:
+            takeaways = generate_key_takeaways(
+                items=[f"{category.capitalize()} item {i}" for i in range(1, 4)],
+                category=category
+            )
+            takeaways_by_category.append(takeaways)
+
+        # Verify all categories
+        assert len(takeaways_by_category) == 4
+        for i, takeaways in enumerate(takeaways_by_category):
+            assert takeaways.props["category"] == categories[i]
+
+    def test_summary_integration_complex_toc(self):
+        """Test complex hierarchical table of contents."""
+        reset_id_counter()
+
+        # Create nested TOC structure with all 4 levels
+        toc = generate_table_of_contents([
+            # Level 0 - Main sections
+            {"title": "Chapter 1: Introduction", "anchor": "ch1", "level": 0},
+            {"title": "Overview", "anchor": "overview", "level": 1},
+            {"title": "Background", "anchor": "background", "level": 2},
+            {"title": "Historical Context", "anchor": "history", "level": 3},
+            {"title": "Modern Context", "anchor": "modern", "level": 3},
+            {"title": "Objectives", "anchor": "objectives", "level": 2},
+
+            {"title": "Chapter 2: Methodology", "anchor": "ch2", "level": 0},
+            {"title": "Research Design", "anchor": "design", "level": 1},
+            {"title": "Data Collection", "anchor": "data", "level": 2},
+            {"title": "Sampling Strategy", "anchor": "sampling", "level": 3},
+            {"title": "Analysis Methods", "anchor": "analysis", "level": 2},
+
+            {"title": "Chapter 3: Results", "anchor": "ch3", "level": 0},
+            {"title": "Findings", "anchor": "findings", "level": 1},
+
+            {"title": "Chapter 4: Conclusion", "anchor": "ch4", "level": 0}
+        ])
+
+        # Verify structure
+        assert len(toc.props["items"]) == 14
+
+        # Verify level distribution
+        level_0_count = sum(1 for item in toc.props["items"] if item["level"] == 0)
+        level_1_count = sum(1 for item in toc.props["items"] if item["level"] == 1)
+        level_2_count = sum(1 for item in toc.props["items"] if item["level"] == 2)
+        level_3_count = sum(1 for item in toc.props["items"] if item["level"] == 3)
+
+        assert level_0_count == 4  # 4 chapters (ch1, ch2, ch3, ch4)
+        assert level_1_count == 3  # 3 level 1 sections (overview, design, findings)
+        assert level_2_count == 4  # 4 level 2 subsections (background, objectives, data, analysis)
+        assert level_3_count == 3  # 3 level 3 subsections (history, modern, sampling)
