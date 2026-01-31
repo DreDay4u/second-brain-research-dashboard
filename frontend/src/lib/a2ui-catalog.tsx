@@ -18,6 +18,7 @@ import { LinkCard, ToolCard, BookCard, RepoCard } from "@/components/A2UI/Resour
 import { ComparisonTable, VsCard, FeatureMatrix, PricingTable } from "@/components/A2UI/Comparison";
 import { StepCard, CodeBlock, CalloutCard, CommandCard } from "@/components/A2UI/Instructional";
 import { Section, Grid, Columns, Tabs, Accordion, Carousel, Sidebar } from "@/components/A2UI/Layout";
+import { TagCloud, CategoryBadge, DifficultyBadge } from "@/components/A2UI/Tags";
 
 /**
  * A2UI Component Specification
@@ -188,38 +189,10 @@ export const a2uiCatalog: Record<string, ComponentRenderer> = {
     );
   },
 
-  // ===== ADDITIONAL COMPONENTS =====
-  "a2ui.TagCloud": ({ tags }: any) => (
-    <div className="flex flex-wrap gap-2">
-      {tags?.map((tag: any, idx: number) => (
-        <Badge key={idx} variant="secondary" style={{ fontSize: `${tag.size || 1}rem` }}>
-          {tag.label}
-        </Badge>
-      ))}
-    </div>
-  ),
-
-  "a2ui.CategoryBadge": ({ category, color }: any) => (
-    <Badge variant="outline" className={color ? `border-${color}-500 text-${color}-700` : ''}>
-      {category}
-    </Badge>
-  ),
-
-  "a2ui.DifficultyBadge": ({ level }: any) => {
-    const variants = {
-      beginner: { variant: 'secondary' as const, label: 'Beginner', icon: '●' },
-      intermediate: { variant: 'default' as const, label: 'Intermediate', icon: '●●' },
-      advanced: { variant: 'destructive' as const, label: 'Advanced', icon: '●●●' },
-    };
-
-    const config = variants[level as keyof typeof variants] || variants.beginner;
-
-    return (
-      <Badge variant={config.variant}>
-        {config.icon} {config.label}
-      </Badge>
-    );
-  },
+  // ===== TAG COMPONENTS =====
+  "a2ui.TagCloud": (props: any) => <TagCloud {...props} />,
+  "a2ui.CategoryBadge": (props: any) => <CategoryBadge {...props} />,
+  "a2ui.DifficultyBadge": (props: any) => <DifficultyBadge {...props} />,
 };
 
 /**
