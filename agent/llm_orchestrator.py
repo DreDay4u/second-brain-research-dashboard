@@ -19,6 +19,7 @@ from a2ui_generator import (
     generate_id,
     reset_id_counter,
     VALID_COMPONENT_TYPES,
+    is_valid_external_url,
     # Component generators
     generate_tldr,
     generate_key_takeaways,
@@ -733,7 +734,8 @@ def build_a2ui_component(spec: dict, content_analysis: dict) -> A2UIComponent | 
 
         elif component_type == "LinkCard":
             url = props.get("url", "")
-            if not url:
+            if not is_valid_external_url(url):
+                print(f"[SKIP] LinkCard with invalid URL: {url!r}")
                 return None
             return generate_link_card(
                 url=url,
@@ -1002,7 +1004,11 @@ def build_a2ui_component(spec: dict, content_analysis: dict) -> A2UIComponent | 
             description = props.get("description", "")
             url = props.get("url", "")
 
-            # ToolCard requires a valid URL
+            # ToolCard requires a valid external URL
+            if not is_valid_external_url(url):
+                print(f"[SKIP] ToolCard '{name}' with invalid URL: {url!r}")
+                return None
+
             if url and url.startswith(("http://", "https://")):
                 return generate_tool_card(
                     name=name,

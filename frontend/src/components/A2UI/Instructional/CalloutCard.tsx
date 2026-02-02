@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 
 export interface CalloutCardProps {
   /** Callout type determining color scheme and icon */
-  type: 'tip' | 'warning' | 'info' | 'danger';
+  type: 'tip' | 'warning' | 'info' | 'danger' | 'success' | 'error' | 'note' | string;
 
   /** Callout title */
   title: string;
@@ -34,7 +34,7 @@ export function CalloutCard({
   content,
   icon,
 }: CalloutCardProps): React.ReactElement {
-  const typeConfig = {
+  const typeConfig: Record<string, { bgColor: string; borderColor: string; icon: string; iconBg: string; titleColor: string }> = {
     tip: {
       bgColor: 'bg-gradient-to-br from-card to-secondary/30',
       borderColor: 'border-l-4 border-blue-500 dark:border-blue-500/70',
@@ -63,9 +63,32 @@ export function CalloutCard({
       iconBg: 'bg-red-500/30 dark:bg-red-500/40',
       titleColor: 'text-red-300',
     },
+    // Backend compatibility types
+    success: {
+      bgColor: 'bg-gradient-to-br from-card to-secondary/30',
+      borderColor: 'border-l-4 border-emerald-500 dark:border-emerald-500/70',
+      icon: '✅',
+      iconBg: 'bg-emerald-500/30 dark:bg-emerald-500/40',
+      titleColor: 'text-emerald-300',
+    },
+    error: {
+      bgColor: 'bg-gradient-to-br from-card to-secondary/30',
+      borderColor: 'border-l-4 border-red-500 dark:border-red-500/70',
+      icon: '🚨',
+      iconBg: 'bg-red-500/30 dark:bg-red-500/40',
+      titleColor: 'text-red-300',
+    },
+    note: {
+      bgColor: 'bg-gradient-to-br from-card to-secondary/30',
+      borderColor: 'border-l-4 border-slate-400 dark:border-slate-400/70',
+      icon: '📝',
+      iconBg: 'bg-slate-400/30 dark:bg-slate-400/40',
+      titleColor: 'text-slate-300',
+    },
   };
 
-  const config = typeConfig[type];
+  // Default to 'info' config for unknown types
+  const config = typeConfig[type] || typeConfig.info;
   const displayIcon = icon || config.icon;
 
   return (

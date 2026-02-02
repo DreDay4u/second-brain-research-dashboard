@@ -20,6 +20,84 @@ from typing import Any, AsyncGenerator
 from pydantic import BaseModel, Field, field_validator
 
 
+def is_valid_external_url(url: str) -> bool:
+    """
+    Check if URL is a valid, complete external URL.
+    Rejects: relative paths, localhost, empty strings, whitespace-only.
+    """
+    if not url or not url.strip():
+        return False
+
+    url = url.strip()
+
+    # Must be absolute URL with scheme
+    if not url.startswith(('http://', 'https://')):
+        return False
+
+    # Reject localhost/loopback
+    localhost_patterns = ['://localhost', '://127.0.0.1', '://0.0.0.0', '://[::1]']
+    for pattern in localhost_patterns:
+        if pattern in url.lower():
+            return False
+
+    # Must have a domain after the scheme (https://x.xx minimum)
+    if len(url) < 12:
+        return False
+
+    return True
+
+
+def normalize_timestamp(timestamp: str) -> str:
+    """
+    Convert various date formats to ISO 8601 format.
+    Handles: "January 2025", "Q1 2024", "Early 2024", etc.
+    Returns original string if parsing fails completely.
+    """
+    from datetime import datetime
+
+    if not timestamp or not timestamp.strip():
+        return ""
+
+    timestamp = timestamp.strip()
+
+    # Already ISO format - return as-is
+    if re.match(r'^\d{4}-\d{2}-\d{2}', timestamp):
+        return timestamp
+
+    # Try dateutil parser for flexible parsing (handles most formats)
+    try:
+        from dateutil import parser as dateutil_parser
+        parsed = dateutil_parser.parse(timestamp, fuzzy=True)
+        return parsed.isoformat()
+    except Exception:
+        pass
+
+    # Handle quarter formats like "Q1 2024", "Q3 2025"
+    quarter_match = re.match(r'Q([1-4])\s*(\d{4})', timestamp, re.IGNORECASE)
+    if quarter_match:
+        quarter, year = int(quarter_match.group(1)), int(quarter_match.group(2))
+        month = (quarter - 1) * 3 + 1  # Q1->Jan, Q2->Apr, Q3->Jul, Q4->Oct
+        return f"{year}-{month:02d}-01T00:00:00Z"
+
+    # Handle "Early/Mid/Late YEAR" formats
+    period_match = re.match(r'(early|mid|late)\s*(\d{4})', timestamp, re.IGNORECASE)
+    if period_match:
+        period, year = period_match.group(1).lower(), int(period_match.group(2))
+        month = {"early": 2, "mid": 6, "late": 10}.get(period, 6)
+        return f"{year}-{month:02d}-01T00:00:00Z"
+
+    # Handle "Month YEAR" formats
+    for fmt in ["%B %Y", "%b %Y"]:
+        try:
+            parsed = datetime.strptime(timestamp, fmt)
+            return parsed.isoformat()
+        except ValueError:
+            pass
+
+    # Return original if all parsing fails
+    return timestamp
+
+
 class A2UIComponent(BaseModel):
     """
     Pydantic model for A2UI component specification.
@@ -572,7 +650,7 @@ def generate_timeline_event(
 
     props = {
         "title": title,
-        "timestamp": timestamp,
+        "timestamp": normalize_timestamp(timestamp),
         "content": content,
         "eventType": event_type,
     }
@@ -2724,14 +2802,14 @@ def generate_quote_card(
         raise ValueError("QuoteCard author cannot be empty")
 
     props = {
-        "text": text.strip(),
+        "quote": text.strip(),
         "author": author.strip(),
         "highlight": highlight,
     }
 
-    # Add optional source
+    # Add optional context (frontend expects "context", not "source")
     if source:
-        props["source"] = source
+        props["context"] = source
 
     return generate_component("a2ui.QuoteCard", props)
 
@@ -3752,18 +3830,19 @@ def generate_vs_card(
         raise ValueError("winner must be 'a', 'b', or None")
 
     props = {
-        "itemA": {
+        "item_a": {
             "name": item_a["name"],
             "description": item_a["description"]
         },
-        "itemB": {
+        "item_b": {
             "name": item_b["name"],
             "description": item_b["description"]
         }
     }
 
     if winner is not None:
-        props["winner"] = winner
+        # Convert 'a'/'b' to 'left'/'right' for frontend compatibility
+        props["winner"] = "left" if winner == "a" else "right"
 
     return generate_component("a2ui.VsCard", props)
 

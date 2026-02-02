@@ -291,6 +291,15 @@ Your task is to select and configure the OPTIMAL set of A2UI components to repre
 - **BookCard**: Books, papers, reading materials
 - **RepoCard**: GitHub repositories, code projects
 
+### URL Requirements (CRITICAL)
+For any component with a URL (LinkCard, ToolCard, RepoCard, BookCard):
+- **ONLY use complete, absolute URLs** starting with `https://`
+- **NEVER use relative paths** like `/docs`, `./api`, or `#section`
+- **NEVER use localhost URLs**
+- If you cannot find a valid external URL for a resource, DO NOT create the component
+- Example valid: `https://github.com/facebook/react`
+- Example invalid: `/docs/intro`, `localhost:3000/api`, `#getting-started`
+
 ### People & Social Components
 - **ProfileCard**: Author profiles, contributors, experts
 - **CompanyCard**: Companies, organizations, brands
