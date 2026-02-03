@@ -1,86 +1,229 @@
 """
-Second Brain Agent - FastAPI application with AG-UI protocol endpoint.
+Second Brain Agent - AG-UI endpoint using Pydantic AI.
 
-This agent transforms Markdown research documents into generative UI dashboards
-using Pydantic AI and the AG-UI protocol with proper event streaming.
+This creates an AG-UI compatible endpoint that CopilotKit can connect to
+for bidirectional state synchronization and streaming agent responses.
 """
 
 import os
+import re
 import json
-from typing import AsyncGenerator
-from contextlib import asynccontextmanager
-from uuid import uuid4
-
-from fastapi import FastAPI, HTTPException, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 from dotenv import load_dotenv
 
-# Load environment variables
+# Load environment variables first
 load_dotenv()
 
-# Import our agent and state
-from agent import get_agent, DashboardState
+from starlette.routing import Route
+from starlette.responses import JSONResponse, StreamingResponse
+from starlette.applications import Starlette
+from starlette.requests import Request
 
-# Import the LLM-powered orchestrator for component generation
-from llm_orchestrator import orchestrate_dashboard_with_llm
+from agent import agent, DashboardState
+from pydantic_ai.ag_ui import StateDeps
 
 # Configuration
 BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
-OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "anthropic/claude-sonnet-4")
 
 
-class HealthResponse(BaseModel):
-    """Health check response model."""
-    status: str
-    version: str
-    agent_ready: bool
+def pascal_to_screaming_snake(name: str) -> str:
+    """Convert PascalCase to SCREAMING_SNAKE_CASE."""
+    # Insert underscore before uppercase letters (except first)
+    result = re.sub(r'(?<!^)(?=[A-Z])', '_', name)
+    return result.upper()
 
 
-class AgentRequest(BaseModel):
-    """AG-UI RunAgentInput compatible request model."""
-    # AG-UI standard fields
-    threadId: str | None = None
-    runId: str | None = None
-    messages: list[dict] | None = None
-    state: dict | None = None
-
-    # Legacy fields for backward compatibility
-    markdown: str | None = None
-    user_id: str | None = None
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager."""
-    print(f"[*] Second Brain Agent starting on port {BACKEND_PORT}")
-    print(f"[*] AG-UI endpoint: http://localhost:{BACKEND_PORT}/agent")
-    print(f"[*] Legacy endpoint: http://localhost:{BACKEND_PORT}/ag-ui/stream")
-
-    if not OPENROUTER_API_KEY:
-        print("[!] WARNING: OPENROUTER_API_KEY not set")
-    else:
-        # Pre-initialize agent
-        try:
-            get_agent()
-            print("[+] Pydantic AI agent initialized")
-        except Exception as e:
-            print(f"[-] Agent init failed: {e}")
-
-    yield
-    print("Second Brain Agent shutting down")
+# Map of PascalCase to SCREAMING_SNAKE_CASE event types
+EVENT_TYPE_MAP = {
+    "RunStarted": "RUN_STARTED",
+    "RunFinished": "RUN_FINISHED",
+    "RunError": "RUN_ERROR",
+    "StepStarted": "STEP_STARTED",
+    "StepFinished": "STEP_FINISHED",
+    "StateSnapshot": "STATE_SNAPSHOT",
+    "StateDelta": "STATE_DELTA",
+    "MessagesSnapshot": "MESSAGES_SNAPSHOT",
+    "TextMessageStart": "TEXT_MESSAGE_START",
+    "TextMessageContent": "TEXT_MESSAGE_CONTENT",
+    "TextMessageEnd": "TEXT_MESSAGE_END",
+    "TextMessageChunk": "TEXT_MESSAGE_CHUNK",
+    "ToolCallStart": "TOOL_CALL_START",
+    "ToolCallArgs": "TOOL_CALL_ARGS",
+    "ToolCallEnd": "TOOL_CALL_END",
+    "ToolCallChunk": "TOOL_CALL_CHUNK",
+    "ToolCallResult": "TOOL_CALL_RESULT",
+    "Raw": "RAW",
+    "Custom": "CUSTOM",
+}
 
 
-app = FastAPI(
-    title="Second Brain Agent",
-    description="AG-UI compliant agent for generative dashboards",
-    version="0.2.0",
-    lifespan=lifespan,
+def transform_event_type(event_data: str) -> str:
+    """Transform event type in SSE data from PascalCase to SCREAMING_SNAKE_CASE."""
+    try:
+        data = json.loads(event_data)
+        if "type" in data:
+            original_type = data["type"]
+            # Check if we have a mapping, otherwise convert dynamically
+            if original_type in EVENT_TYPE_MAP:
+                data["type"] = EVENT_TYPE_MAP[original_type]
+            elif not original_type.isupper():
+                # Dynamically convert if not already SCREAMING_SNAKE_CASE
+                data["type"] = pascal_to_screaming_snake(original_type)
+        return json.dumps(data)
+    except json.JSONDecodeError:
+        return event_data
+
+
+async def transform_sse_stream(original_response):
+    """Transform SSE stream to use SCREAMING_SNAKE_CASE event types."""
+    try:
+        async for chunk in original_response.body_iterator:
+            try:
+                if isinstance(chunk, bytes):
+                    chunk = chunk.decode('utf-8')
+
+                # Process each line in the chunk
+                lines = chunk.split('\n')
+                transformed_lines = []
+
+                for line in lines:
+                    if line.startswith('event: '):
+                        # Transform event name
+                        event_name = line[7:]
+                        if event_name in EVENT_TYPE_MAP:
+                            transformed_lines.append(f'event: {EVENT_TYPE_MAP[event_name]}')
+                        elif not event_name.isupper():
+                            transformed_lines.append(f'event: {pascal_to_screaming_snake(event_name)}')
+                        else:
+                            transformed_lines.append(line)
+                    elif line.startswith('data: '):
+                        # Transform data JSON
+                        data = line[6:]
+                        transformed_data = transform_event_type(data)
+                        transformed_lines.append(f'data: {transformed_data}')
+                    else:
+                        transformed_lines.append(line)
+
+                yield '\n'.join(transformed_lines)
+            except Exception as chunk_error:
+                print(f"[SSE ERROR] Error processing chunk: {chunk_error}", flush=True)
+                import traceback
+                traceback.print_exc()
+                raise
+    except Exception as stream_error:
+        print(f"[SSE ERROR] Stream error: {stream_error}", flush=True)
+        import traceback
+        traceback.print_exc()
+        raise
+
+
+# Create the base AG-UI app using Pydantic AI's built-in integration
+_base_ag_ui_app = agent.to_ag_ui(
+    deps=StateDeps(DashboardState()),
 )
 
-# CORS - Allow all for development
+# Create our wrapper app
+app = Starlette()
+
+# AG-UI POST endpoint with event type transformation
+async def ag_ui_endpoint(request: Request):
+    """
+    AG-UI endpoint that wraps Pydantic AI's implementation
+    and transforms event types to SCREAMING_SNAKE_CASE format.
+    """
+    try:
+        # Log incoming request
+        body = await request.body()
+        print(f"[AG-UI] Received request: {len(body)} bytes", flush=True)
+
+        # Create a new request with the body for the base app
+        from starlette.requests import Request as StarletteRequest
+        from starlette.datastructures import Headers
+
+        # We need to recreate the request because we consumed the body
+        scope = dict(request.scope)
+
+        async def receive():
+            return {"type": "http.request", "body": body}
+
+        new_request = StarletteRequest(scope, receive)
+
+        # Get the original response from the base AG-UI app
+        # Find the POST route handler
+        for route in _base_ag_ui_app.routes:
+            if hasattr(route, 'methods') and 'POST' in route.methods:
+                original_response = await route.endpoint(new_request)
+                break
+        else:
+            return JSONResponse({"error": "AG-UI endpoint not found"}, status_code=500)
+
+        # If it's a streaming response, wrap it with our transformer
+        if isinstance(original_response, StreamingResponse):
+            return StreamingResponse(
+                transform_sse_stream(original_response),
+                media_type="text/event-stream",
+                headers=dict(original_response.headers),
+            )
+
+        return original_response
+    except Exception as e:
+        print(f"[AG-UI ERROR] {e}", flush=True)
+        import traceback
+        traceback.print_exc()
+        return JSONResponse({"error": str(e)}, status_code=500)
+
+
+# Info endpoint for debugging / CopilotKit compatibility
+async def info_endpoint(request: Request):
+    """Return agent information."""
+    return JSONResponse({
+        "name": "Second Brain Dashboard Agent",
+        "version": "1.0.0",
+        "protocol": "ag-ui",
+        "description": "Generate interactive dashboards from markdown research documents",
+    })
+
+
+# Health endpoint
+async def health_endpoint(request: Request):
+    """Health check endpoint."""
+    return JSONResponse({
+        "status": "healthy",
+        "agent_ready": bool(os.getenv("OPENROUTER_API_KEY")),
+    })
+
+
+# GET handler for root to help with debugging/discovery
+async def root_get_endpoint(request: Request):
+    """Return AG-UI endpoint info for GET requests."""
+    return JSONResponse({
+        "protocol": "ag-ui",
+        "version": "1.0.0",
+        "endpoints": {
+            "run_agent": "POST /",
+            "info": "GET /info",
+            "health": "GET /health",
+        },
+        "description": "Second Brain Dashboard Agent - POST to / to run the agent",
+    })
+
+
+# Combined handler for root path
+async def root_handler(request: Request):
+    """Handle both GET and POST for root path."""
+    if request.method == "POST":
+        return await ag_ui_endpoint(request)
+    return await root_get_endpoint(request)
+
+
+# Add routes to the app
+app.routes.append(Route("/", root_handler, methods=["GET", "POST"]))
+app.routes.append(Route("/info", info_endpoint, methods=["GET"]))
+app.routes.append(Route("/health", health_endpoint, methods=["GET"]))
+
+
+# Add CORS middleware for development
+from starlette.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -90,267 +233,19 @@ app.add_middleware(
 )
 
 
-@app.get("/health", response_model=HealthResponse)
-async def health_check():
-    return HealthResponse(
-        status="healthy",
-        version="0.2.0",
-        agent_ready=OPENROUTER_API_KEY is not None,
-    )
+@app.on_event("startup")
+async def startup():
+    """Startup event handler."""
+    print(f"[*] Second Brain Agent (AG-UI) starting on port {BACKEND_PORT}")
+    print(f"[*] AG-UI endpoint: POST http://localhost:{BACKEND_PORT}/")
+    print(f"[*] Info endpoint: GET http://localhost:{BACKEND_PORT}/info")
+    print(f"[*] Health endpoint: GET http://localhost:{BACKEND_PORT}/health")
 
-
-def emit_ag_ui_event(event_type: str, data: dict) -> str:
-    """Format an AG-UI protocol event as SSE."""
-    return f"event: {event_type}\ndata: {json.dumps(data)}\n\n"
-
-
-@app.post("/agent")
-async def agent_endpoint(request: AgentRequest) -> StreamingResponse:
-    """
-    AG-UI protocol endpoint with proper event streaming.
-
-    This endpoint accepts AG-UI RunAgentInput and returns a streaming
-    response with proper AG-UI events (RunStarted, StateSnapshot,
-    StateDelta, TextMessageContent, ToolCall*, RunFinished).
-
-    The frontend's markdown content is passed via:
-    - state.markdown_content (AG-UI standard)
-    - markdown field (legacy support)
-    """
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="OPENROUTER_API_KEY not configured",
-        )
-
-    # Extract markdown from either new or legacy format
-    markdown_content = ""
-    if request.state and "markdown_content" in request.state:
-        markdown_content = request.state["markdown_content"]
-    elif request.markdown:
-        markdown_content = request.markdown
-
-    if not markdown_content or not markdown_content.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Markdown content is required",
-        )
-
-    # Generate IDs if not provided
-    thread_id = request.threadId or str(uuid4())
-    run_id = request.runId or str(uuid4())
-
-    async def event_generator() -> AsyncGenerator[str, None]:
-        """Generate AG-UI protocol events."""
-        try:
-            # Emit RunStarted
-            yield emit_ag_ui_event("RunStarted", {
-                "type": "RunStarted",
-                "threadId": thread_id,
-                "runId": run_id,
-            })
-
-            # Create initial state
-            state = DashboardState(markdown_content=markdown_content)
-
-            # Emit StateSnapshot (initial state)
-            yield emit_ag_ui_event("StateSnapshot", {
-                "type": "StateSnapshot",
-                "snapshot": state.model_dump(),
-            })
-
-            # Process with orchestrator and emit StateDelta events
-            print(f"\n[AGENT] Starting dashboard generation for {len(markdown_content)} chars")
-
-            # Update state to analyzing
-            state.status = "analyzing"
-            state.progress = 10
-            state.current_step = "Starting analysis..."
-
-            yield emit_ag_ui_event("StateDelta", {
-                "type": "StateDelta",
-                "delta": [
-                    {"op": "replace", "path": "/status", "value": "analyzing"},
-                    {"op": "replace", "path": "/progress", "value": 10},
-                    {"op": "replace", "path": "/current_step", "value": "Starting analysis..."},
-                ]
-            })
-
-            # Use the LLM orchestrator to generate components
-            component_count = 0
-            async for component in orchestrate_dashboard_with_llm(markdown_content):
-                component_count += 1
-
-                # Convert component to dict
-                component_dict = {
-                    "type": component.type,
-                    "id": component.id,
-                    "props": component.props,
-                }
-                if component.layout:
-                    component_dict["layout"] = component.layout
-                if component.zone:
-                    component_dict["zone"] = component.zone
-
-                # Add to state
-                state.components.append(component_dict)
-
-                # Calculate progress (components usually happen at 70-95%)
-                progress = min(70 + (component_count * 2), 95)
-
-                # Emit StateDelta for new component
-                yield emit_ag_ui_event("StateDelta", {
-                    "type": "StateDelta",
-                    "delta": [
-                        {"op": "add", "path": "/components/-", "value": component_dict},
-                        {"op": "replace", "path": "/progress", "value": progress},
-                        {"op": "replace", "path": "/status", "value": "generating"},
-                        {"op": "replace", "path": "/current_step", "value": f"Generated {component.type}"},
-                    ]
-                })
-
-                # Also emit as TextMessageContent for chat-like display
-                yield emit_ag_ui_event("TextMessageContent", {
-                    "type": "TextMessageContent",
-                    "textDelta": f"Generated {component.type} component\n",
-                })
-
-            # Emit final state update
-            yield emit_ag_ui_event("StateDelta", {
-                "type": "StateDelta",
-                "delta": [
-                    {"op": "replace", "path": "/status", "value": "complete"},
-                    {"op": "replace", "path": "/progress", "value": 100},
-                    {"op": "replace", "path": "/current_step", "value": "Dashboard complete!"},
-                    {"op": "add", "path": "/activity_log/-", "value": {
-                        "id": str(uuid4()),
-                        "message": f"Generated {component_count} components",
-                        "timestamp": __import__('datetime').datetime.now().isoformat(),
-                        "status": "completed"
-                    }}
-                ]
-            })
-
-            # Emit RunFinished
-            yield emit_ag_ui_event("RunFinished", {
-                "type": "RunFinished",
-                "threadId": thread_id,
-                "runId": run_id,
-            })
-
-            print(f"[AGENT] Complete - generated {component_count} components")
-
-        except Exception as e:
-            import traceback
-            print(f"[AGENT ERROR] {e}")
-            traceback.print_exc()
-
-            # Emit error event
-            yield emit_ag_ui_event("StateDelta", {
-                "type": "StateDelta",
-                "delta": [
-                    {"op": "replace", "path": "/status", "value": "error"},
-                    {"op": "replace", "path": "/error_message", "value": str(e)},
-                ]
-            })
-
-            yield emit_ag_ui_event("RunFinished", {
-                "type": "RunFinished",
-                "threadId": thread_id,
-                "runId": run_id,
-            })
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-# Legacy endpoint for backward compatibility
-@app.post("/ag-ui/stream")
-async def legacy_stream(request: AgentRequest) -> StreamingResponse:
-    """
-    Legacy endpoint that streams components directly.
-
-    This maintains backward compatibility with the existing frontend
-    while transitioning to the new AG-UI protocol.
-    """
-    if not OPENROUTER_API_KEY:
-        raise HTTPException(
-            status_code=500,
-            detail="OPENROUTER_API_KEY not configured",
-        )
-
-    # Extract markdown
-    markdown_content = ""
-    if request.state and "markdown_content" in request.state:
-        markdown_content = request.state["markdown_content"]
-    elif request.markdown:
-        markdown_content = request.markdown
-
-    if not markdown_content or not markdown_content.strip():
-        raise HTTPException(
-            status_code=400,
-            detail="Markdown content is required",
-        )
-
-    async def event_generator() -> AsyncGenerator[str, None]:
-        """Generate SSE events with components."""
-        try:
-            print(f"\n[LEGACY] Starting dashboard generation")
-
-            component_count = 0
-            async for component in orchestrate_dashboard_with_llm(markdown_content):
-                component_count += 1
-
-                component_dict = {
-                    "type": component.type,
-                    "id": component.id,
-                    "props": component.props,
-                }
-                if component.layout:
-                    component_dict["layout"] = component.layout
-                if component.zone:
-                    component_dict["zone"] = component.zone
-
-                yield f"data: {json.dumps(component_dict)}\n\n"
-
-            yield f"data: [DONE]\n\n"
-            print(f"[LEGACY] Complete - {component_count} components")
-
-        except Exception as e:
-            import traceback
-            traceback.print_exc()
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
-
-
-@app.get("/")
-async def root():
-    return {
-        "name": "Second Brain Agent",
-        "version": "0.2.0",
-        "endpoints": {
-            "health": "/health",
-            "agent": "/agent (POST, AG-UI protocol)",
-            "legacy": "/ag-ui/stream (POST, legacy SSE)",
-        },
-        "documentation": "/docs",
-    }
+    api_key = os.getenv("OPENROUTER_API_KEY")
+    if not api_key:
+        print("[!] WARNING: OPENROUTER_API_KEY not set")
+    else:
+        print("[+] OpenRouter API key configured")
 
 
 if __name__ == "__main__":
